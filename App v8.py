@@ -1,9 +1,5 @@
 # app.py
 
-git add requirements.txt
-git commit -m "Add requirements.txt for deployment"
-git push
-
 import os
 import base64
 import streamlit as st
