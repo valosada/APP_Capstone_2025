@@ -16,13 +16,7 @@ st.markdown("""
   --primary-color: #1a73e8;
   --text-color: #202124;
   --subtext-color: #5f6368;
-  --card-bg: #ffffff;
-  --card-border: rgba(0,0,0,0.1);
 }
-/* Hero */
-.hero { padding:80px 20px; text-align:center; margin-bottom:60px; }
-/* Buttons */
-.btn-primary { background-color:var(--primary-color)!important; color:white!important; }
 /* Headings */
 h1, h2, h3 { color:var(--text-color)!important; }
 /* Paragraphs */
@@ -46,19 +40,15 @@ def navigate(page_name):
 
 # ─── 3. TOP NAVIGATION ──────────────────────────────────────
 st.markdown("<h1 style='text-align:center;'>🚲 Bicing Barcelona</h1>", unsafe_allow_html=True)
-col1, col2, col3, col4 = st.columns(4)
-with col1:
-    if st.button("🏠 Home"):
-        navigate("Home")
-with col2:
-    if st.button("🗺️ Map"):
-        navigate("Map")
-with col3:
-    if st.button("📊 Stats"):
-        navigate("Stats")
-with col4:
-    if st.button("👥 Team"):
-        navigate("Team")
+c1, c2, c3, c4 = st.columns(4)
+with c1:
+    if st.button("🏠 Home"): navigate("Home")
+with c2:
+    if st.button("🗺️ Map"): navigate("Map")
+with c3:
+    if st.button("📊 Stats"): navigate("Stats")
+with c4:
+    if st.button("👥 Team"): navigate("Team")
 st.markdown("---")
 
 # ─── 4. HOME PAGE ───────────────────────────────────────────
@@ -117,23 +107,30 @@ elif st.session_state.page == "Map":
         base = os.path.dirname(__file__)
         path = os.path.join(base, "data", "markers.csv")
         df = pd.read_csv(path, encoding="latin1")
-        df.columns = ["station_id","name","latitude","longitude","description","type"]
+        # clean headers
+        df.columns = df.columns.str.strip().str.replace('\ufeff','')
+        st.write("🔍 Columns in markers.csv:", df.columns.tolist())
+        # rename based on count
+        if len(df.columns) == 5:
+            df.columns = ["name","latitude","longitude","description","type"]
+        elif len(df.columns) == 6:
+            df.columns = ["station_id","name","latitude","longitude","description","type"]
+            df["station_id"] = pd.to_numeric(df["station_id"], errors="coerce").astype("Int64")
+        else:
+            st.error(f"markers.csv has {len(df.columns)} columns; expected 5 or 6")
+            st.stop()
         df["type"] = df["type"].str.lower().str.strip()
-        df["station_id"] = pd.to_numeric(df["station_id"], errors="coerce").astype("Int64")
         df["latitude"] = pd.to_numeric(df["latitude"], errors="coerce")
         df["longitude"] = pd.to_numeric(df["longitude"], errors="coerce")
-        return df.dropna(subset=["station_id","latitude","longitude"])
+        return df.dropna(subset=["latitude","longitude"])
 
     markers_df = load_markers()
     map_col, filter_col = st.columns([3,1], gap="medium")
     with filter_col:
-        types = ["new","old"]
-        sel = st.multiselect(
-            "Station Type",
-            options=types,
-            default=types,
-            format_func=lambda t: "🟢 New" if t=="new" else "🔴 Old"
-        )
+        sel = st.multiselect("Station Type",
+                            options=["new","old"],
+                            default=["new","old"],
+                            format_func=lambda t: "🟢 New" if t=="new" else "🔴 Old")
     filtered = markers_df[markers_df["type"].isin(sel)]
 
     with map_col:
@@ -153,7 +150,7 @@ elif st.session_state.page == "Map":
             ico = icon_green if r["type"]=="new" else icon_red
             folium.Marker(
                 location=[r["latitude"], r["longitude"]],
-                popup=f"{r['name']} ({r['type']})",
+                popup=f"{r.get('name','')}",
                 icon=ico
             ).add_to(cluster)
         st_folium(m1, width=800, height=500)
@@ -169,7 +166,12 @@ elif st.session_state.page == "Map":
         path = os.path.join(base, "data", "availability.csv")
         df = pd.read_csv(path, parse_dates=["time"], encoding="utf-8-sig")
         df.columns = df.columns.str.strip().str.replace('\ufeff','')
-        df = df.rename(columns={"station_id":"station_id","available_bikes":"available_bikes"})
+        st.write("🔍 Columns in availability.csv:", df.columns.tolist())
+        # rename common variants
+        rename_map = {}
+        if "station_id" in df.columns: rename_map["station_id"] = "station_id"
+        if "available_bikes" in df.columns: rename_map["available_bikes"] = "available_bikes"
+        df = df.rename(columns=rename_map)
         df["station_id"] = pd.to_numeric(df["station_id"], errors="coerce").astype("Int64")
         df["available_bikes"] = pd.to_numeric(df["available_bikes"], errors="coerce")
         return df.dropna(subset=["station_id","time","available_bikes"])
@@ -179,6 +181,8 @@ elif st.session_state.page == "Map":
         base = os.path.dirname(__file__)
         path = os.path.join(base, "data", "markers.csv")
         df = pd.read_csv(path, encoding="latin1")
+        df.columns = df.columns.str.strip().str.replace('\ufeff','')
+        # assume station_id present
         df.columns = ["station_id","name","latitude","longitude","description","type"]
         df["station_id"] = pd.to_numeric(df["station_id"], errors="coerce").astype("Int64")
         df["latitude"]   = pd.to_numeric(df["latitude"], errors="coerce")
@@ -187,18 +191,16 @@ elif st.session_state.page == "Map":
             ["station_id","name","latitude","longitude"]
         ]
 
-    avail_df   = load_availability()
+    avail_df = load_availability()
     markers_for_merge = load_markers_for_merge()
-    df = pd.merge(avail_df, markers_for_merge, on="station_id", how="inner")
-
-    if df.empty:
+    merged = pd.merge(avail_df, markers_for_merge, on="station_id", how="inner")
+    if merged.empty:
         st.error("No data after merging markers & availability.")
     else:
         features = []
         def bike_color(n):
             return "#2ECC71" if n>=10 else "#F1C40F" if n>=5 else "#E74C3C"
-
-        for _, r in df.iterrows():
+        for _, r in merged.iterrows():
             features.append({
                 "type":"Feature",
                 "geometry":{"type":"Point","coordinates":[r["longitude"], r["latitude"]]},
@@ -213,7 +215,6 @@ elif st.session_state.page == "Map":
                     "popup": f"{r['name']}<br>Available: {r['available_bikes']}"
                 }
             })
-
         time_geojson = {"type":"FeatureCollection","features":features}
         m2 = folium.Map(location=[41.3851, 2.1734], zoom_start=13)
         TimestampedGeoJson(
@@ -239,8 +240,8 @@ elif st.session_state.page == "Stats":
 elif st.session_state.page == "Team":
     st.header("👥 Meet the Team")
     team = [
-        {"name":"Agustín Jaime",    "img":"assets/agustin.jpg"},
-        {"name":"Javier Verba",     "img":"assets/javier.jpg"},
+        {"name":"Agustín Jaime","img":"assets/agustin.jpg"},
+        {"name":"Javier Verba",  "img":"assets/javier.jpg"},
         {"name":"Mariana Henriques","img":"assets/mariana.jpg"},
         {"name":"Victoria Losada",  "img":"assets/vicky.jpg"},
     ]
