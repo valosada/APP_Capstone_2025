@@ -92,17 +92,14 @@ if st.session_state.page == "Home":
         st.markdown("### 🌆 Urban Mobility")
         st.write("Assess bike sharing’s impact on city transportation and sustainability.")
 
-    # Spacer
+    # Spacer and UB logo
     st.write("")
-    st.write("")
-
-    # Centered UB logo (Base64)
     logo_fp = os.path.join(os.path.dirname(__file__), "assets", "UB logo.png")
     if os.path.exists(logo_fp):
         data = base64.b64encode(open(logo_fp, "rb").read()).decode("utf-8")
         st.markdown(f"""
-          <div style="text-align:center;">
-            <img src="data:image/png;base64,{data}" width="150" />
+          <div style="text-align:center; margin-top:20px;">
+            <img src="data:image/png;base64,{data}" width="100" />
             <p style="color:#5f6368; margin-top:8px;">Universitat de Barcelona</p>
           </div>
         """, unsafe_allow_html=True)
@@ -113,26 +110,30 @@ if st.session_state.page == "Home":
 elif st.session_state.page == "Map":
     st.header("🗺️ Map Views")
 
-    # ── 5.1 Static map with New/Old filter ──────────────────
+    # 5.1 Static map with filter
     st.subheader("🚩 Static Map: Filter by Station Type")
     @st.cache_data
     def load_markers():
         base = os.path.dirname(__file__)
         path = os.path.join(base, "data", "markers.csv")
         df = pd.read_csv(path, encoding="latin1")
-        df.columns = ["name","latitude","longitude","description","type"]
+        df.columns = ["station_id","name","latitude","longitude","description","type"]
         df["type"] = df["type"].str.lower().str.strip()
-        df = df.dropna(subset=["latitude","longitude"])
+        df["station_id"] = pd.to_numeric(df["station_id"], errors="coerce").astype("Int64")
         df["latitude"] = pd.to_numeric(df["latitude"], errors="coerce")
         df["longitude"] = pd.to_numeric(df["longitude"], errors="coerce")
-        return df.dropna(subset=["latitude","longitude"])
+        return df.dropna(subset=["station_id","latitude","longitude"])
 
     markers_df = load_markers()
     map_col, filter_col = st.columns([3,1], gap="medium")
     with filter_col:
         types = ["new","old"]
-        sel = st.multiselect("Station Type", options=types, default=types,
-                              format_func=lambda t: "🟢 New" if t=="new" else "🔴 Old")
+        sel = st.multiselect(
+            "Station Type",
+            options=types,
+            default=types,
+            format_func=lambda t: "🟢 New" if t=="new" else "🔴 Old"
+        )
     filtered = markers_df[markers_df["type"].isin(sel)]
 
     with map_col:
@@ -159,96 +160,73 @@ elif st.session_state.page == "Map":
 
     st.markdown("---")
 
-# ── 5.2 Animated availability map (con merge) ─────────────
-st.subheader("⏱️ Animated Map: Bike Availability Over Time")
+    # 5.2 Animated availability map with merge
+    st.subheader("⏱️ Animated Map: Bike Availability Over Time")
 
-@st.cache_data
-def load_markers_with_id(path="data/markers.csv") -> pd.DataFrame:
-    base = os.path.dirname(__file__)
-    p = os.path.join(base, path)
-    m = pd.read_csv(p, encoding="latin1")
-    # Normaliza nombres de columna
-    m.columns = m.columns.str.strip()
-    # Asegúrate de que existen estas columnas en markers.csv
-    # station_id,name,latitude,longitude,description,type
-    m = m.rename(columns={ "station_id":"station_id",
-                           "name":"name",
-                           "latitude":"latitude",
-                           "longitude":"longitude",
-                         })
-    # Convertimos station_id a int (p.ej. de "1.0" a 1)
-    m["station_id"] = pd.to_numeric(m["station_id"], errors="coerce").astype("Int64")
-    m["latitude"]   = pd.to_numeric(m["latitude"],   errors="coerce")
-    m["longitude"]  = pd.to_numeric(m["longitude"],  errors="coerce")
-    return m.dropna(subset=["station_id","latitude","longitude"])
+    @st.cache_data
+    def load_availability():
+        base = os.path.dirname(__file__)
+        path = os.path.join(base, "data", "availability.csv")
+        df = pd.read_csv(path, parse_dates=["time"], encoding="utf-8-sig")
+        df.columns = df.columns.str.strip().str.replace('\ufeff','')
+        df = df.rename(columns={"station_id":"station_id","available_bikes":"available_bikes"})
+        df["station_id"] = pd.to_numeric(df["station_id"], errors="coerce").astype("Int64")
+        df["available_bikes"] = pd.to_numeric(df["available_bikes"], errors="coerce")
+        return df.dropna(subset=["station_id","time","available_bikes"])
 
-@st.cache_data
-def load_availability_with_id(path="data/availability.csv") -> pd.DataFrame:
-    base = os.path.dirname(__file__)
-    p = os.path.join(base, path)
-    a = pd.read_csv(p, parse_dates=["time"], encoding="utf-8-sig")
-    a.columns = a.columns.str.strip().str.replace("\ufeff","")
-    # Renombra si hace falta
-    a = a.rename(columns={ "station_id":"station_id",
-                           "available_bikes":"available_bikes" })
-    # Convierte station_id de "1.0" -> 1
-    a["station_id"]     = pd.to_numeric(a["station_id"], errors="coerce").astype("Int64")
-    a["available_bikes"] = pd.to_numeric(a["available_bikes"], errors="coerce")
-    return a.dropna(subset=["station_id","time","available_bikes"])
+    @st.cache_data
+    def load_markers_for_merge():
+        base = os.path.dirname(__file__)
+        path = os.path.join(base, "data", "markers.csv")
+        df = pd.read_csv(path, encoding="latin1")
+        df.columns = ["station_id","name","latitude","longitude","description","type"]
+        df["station_id"] = pd.to_numeric(df["station_id"], errors="coerce").astype("Int64")
+        df["latitude"]   = pd.to_numeric(df["latitude"], errors="coerce")
+        df["longitude"]  = pd.to_numeric(df["longitude"], errors="coerce")
+        return df.dropna(subset=["station_id","latitude","longitude"])[
+            ["station_id","name","latitude","longitude"]
+        ]
 
-# Cargo ambos
-markers_df = load_markers_with_id()
-avail_df   = load_availability_with_id()
+    avail_df   = load_availability()
+    markers_for_merge = load_markers_for_merge()
+    df = pd.merge(avail_df, markers_for_merge, on="station_id", how="inner")
 
-# Merge para tener lat/lon/name en availability
-df = pd.merge(
-    avail_df,
-    markers_df[["station_id","name","latitude","longitude"]],
-    on="station_id",
-    how="inner"
-)
+    if df.empty:
+        st.error("No data after merging markers & availability.")
+    else:
+        features = []
+        def bike_color(n):
+            return "#2ECC71" if n>=10 else "#F1C40F" if n>=5 else "#E74C3C"
 
-if df.empty:
-    st.error("No data after merging markers & availability.")
-    st.stop()
+        for _, r in df.iterrows():
+            features.append({
+                "type":"Feature",
+                "geometry":{"type":"Point","coordinates":[r["longitude"], r["latitude"]]},
+                "properties":{
+                    "time": r["time"].strftime("%Y-%m-%dT%H:%M:%S"),
+                    "icon": "circle",
+                    "style":{
+                        "color":    bike_color(r["available_bikes"]),
+                        "fillColor":bike_color(r["available_bikes"]),
+                        "radius":   6
+                    },
+                    "popup": f"{r['name']}<br>Available: {r['available_bikes']}"
+                }
+            })
 
-# Construye features GeoJSON
-features = []
-def bike_color(n):
-    return "#2ECC71" if n>=10 else "#F1C40F" if n>=5 else "#E74C3C"
-
-for _, r in df.iterrows():
-    features.append({
-        "type":"Feature",
-        "geometry":{"type":"Point","coordinates":[r["longitude"], r["latitude"]]},
-        "properties":{
-            "time": r["time"].strftime("%Y-%m-%dT%H:%M:%S"),
-            "icon": "circle",
-            "style":{
-                "color":    bike_color(r["available_bikes"]),
-                "fillColor":bike_color(r["available_bikes"]),
-                "radius":   6
-            },
-            "popup": f"{r['name']}<br>Available: {r['available_bikes']}"
-        }
-    })
-
-time_geojson = {"type":"FeatureCollection","features":features}
-
-# Renderiza el mapa animado
-m2 = folium.Map(location=[41.3851, 2.1734], zoom_start=13)
-TimestampedGeoJson(
-    data=time_geojson,
-    transition_time=200,
-    period="PT1H",
-    add_last_point=True,
-    auto_play=True,
-    loop=False,
-    date_options="YYYY-MM-DD HH:mm",
-    time_slider_drag_update=True
-).add_to(m2)
-
-st_folium(m2, width=800, height=500)
+        time_geojson = {"type":"FeatureCollection","features":features}
+        m2 = folium.Map(location=[41.3851, 2.1734], zoom_start=13)
+        TimestampedGeoJson(
+            data=time_geojson,
+            transition_time=200,
+            period="PT1H",
+            add_last_point=True,
+            auto_play=True,
+            loop=False,
+            date_options="YYYY-MM-DD HH:mm",
+            time_slider_drag_update=True
+        ).add_to(m2)
+        st_folium(m2, width=800, height=500)
 
 # ─── 6. STATS PAGE ──────────────────────────────────────────
 elif st.session_state.page == "Stats":
