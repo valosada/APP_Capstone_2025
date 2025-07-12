@@ -159,82 +159,96 @@ elif st.session_state.page == "Map":
 
     st.markdown("---")
 
-# ── 5.2 Animated availability map ────────────────────────
-    st.subheader("⏱️ Animated Map: Bike Availability Over Time")
+# ── 5.2 Animated availability map (con merge) ─────────────
+st.subheader("⏱️ Animated Map: Bike Availability Over Time")
 
-    @st.cache_data
-    def load_availability():
-        base = os.path.dirname(__file__)
-        path = os.path.join(base, "data", "availability.csv")
-        df = pd.read_csv(
-            path,
-            parse_dates=["time"],
-            encoding="utf-8-sig",
-            sep=","
-        )
-        # Limpia posibles espacios/BOM en cabeceras
-        df.columns = df.columns.str.strip().str.replace('\ufeff','')
-        # (opcional) debug
-        st.write("📋 Columns availability:", df.columns.tolist())
+@st.cache_data
+def load_markers_with_id(path="data/markers.csv") -> pd.DataFrame:
+    base = os.path.dirname(__file__)
+    p = os.path.join(base, path)
+    m = pd.read_csv(p, encoding="latin1")
+    # Normaliza nombres de columna
+    m.columns = m.columns.str.strip()
+    # Asegúrate de que existen estas columnas en markers.csv
+    # station_id,name,latitude,longitude,description,type
+    m = m.rename(columns={ "station_id":"station_id",
+                           "name":"name",
+                           "latitude":"latitude",
+                           "longitude":"longitude",
+                         })
+    # Convertimos station_id a int (p.ej. de "1.0" a 1)
+    m["station_id"] = pd.to_numeric(m["station_id"], errors="coerce").astype("Int64")
+    m["latitude"]   = pd.to_numeric(m["latitude"],   errors="coerce")
+    m["longitude"]  = pd.to_numeric(m["longitude"],  errors="coerce")
+    return m.dropna(subset=["station_id","latitude","longitude"])
 
-        # ajusta si tus columnas vienen con otros nombres
-        rename_map = {}
-        if "station_name" in df.columns: rename_map["station_name"] = "name"
-        if "lat" in df.columns:           rename_map["lat"] = "latitude"
-        if "lon" in df.columns:           rename_map["lon"] = "longitude"
-        df = df.rename(columns=rename_map)
+@st.cache_data
+def load_availability_with_id(path="data/availability.csv") -> pd.DataFrame:
+    base = os.path.dirname(__file__)
+    p = os.path.join(base, path)
+    a = pd.read_csv(p, parse_dates=["time"], encoding="utf-8-sig")
+    a.columns = a.columns.str.strip().str.replace("\ufeff","")
+    # Renombra si hace falta
+    a = a.rename(columns={ "station_id":"station_id",
+                           "available_bikes":"available_bikes" })
+    # Convierte station_id de "1.0" -> 1
+    a["station_id"]     = pd.to_numeric(a["station_id"], errors="coerce").astype("Int64")
+    a["available_bikes"] = pd.to_numeric(a["available_bikes"], errors="coerce")
+    return a.dropna(subset=["station_id","time","available_bikes"])
 
-        required = ["name","latitude","longitude","time","available_bikes"]
-        missing = [c for c in required if c not in df.columns]
-        if missing:
-            st.error(f"🚨 Missing columns in availability.csv: {missing}")
-            st.stop()
+# Cargo ambos
+markers_df = load_markers_with_id()
+avail_df   = load_availability_with_id()
 
-        df = df.dropna(subset=required)
-        df["available_bikes"] = pd.to_numeric(df["available_bikes"], errors="coerce")
-        return df.dropna(subset=["available_bikes"])
+# Merge para tener lat/lon/name en availability
+df = pd.merge(
+    avail_df,
+    markers_df[["station_id","name","latitude","longitude"]],
+    on="station_id",
+    how="inner"
+)
 
-    avail = load_availability()
+if df.empty:
+    st.error("No data after merging markers & availability.")
+    st.stop()
 
-    # Construye los features con style + icon:"circle"
-    features = []
-    def bike_color(n):
-        return "#2ECC71" if n>=10 else "#F1C40F" if n>=5 else "#E74C3C"
+# Construye features GeoJSON
+features = []
+def bike_color(n):
+    return "#2ECC71" if n>=10 else "#F1C40F" if n>=5 else "#E74C3C"
 
-    for _, r in avail.iterrows():
-        features.append({
-            "type": "Feature",
-            "geometry": {
-                "type": "Point",
-                "coordinates": [r["longitude"], r["latitude"]]
+for _, r in df.iterrows():
+    features.append({
+        "type":"Feature",
+        "geometry":{"type":"Point","coordinates":[r["longitude"], r["latitude"]]},
+        "properties":{
+            "time": r["time"].strftime("%Y-%m-%dT%H:%M:%S"),
+            "icon": "circle",
+            "style":{
+                "color":    bike_color(r["available_bikes"]),
+                "fillColor":bike_color(r["available_bikes"]),
+                "radius":   6
             },
-            "properties": {
-                "time": r["time"].strftime("%Y-%m-%dT%H:%M:%S"),
-                "icon": "circle",            # <-- esto es clave
-                "style": {
-                    "color":    bike_color(r["available_bikes"]),
-                    "fillColor":bike_color(r["available_bikes"]),
-                    "radius":   6
-                },
-                "popup": f"{r['name']}<br>Available: {r['available_bikes']}"
-            }
-        })
+            "popup": f"{r['name']}<br>Available: {r['available_bikes']}"
+        }
+    })
 
-    time_geojson = {"type":"FeatureCollection","features":features}
+time_geojson = {"type":"FeatureCollection","features":features}
 
-    m2 = folium.Map(location=[41.3851, 2.1734], zoom_start=13)
-    TimestampedGeoJson(
-        data=time_geojson,
-        transition_time=200,
-        period="PT1H",
-        add_last_point=True,
-        auto_play=True,
-        loop=False,
-        date_options="YYYY-MM-DD HH:mm",
-        time_slider_drag_update=True
-    ).add_to(m2)
+# Renderiza el mapa animado
+m2 = folium.Map(location=[41.3851, 2.1734], zoom_start=13)
+TimestampedGeoJson(
+    data=time_geojson,
+    transition_time=200,
+    period="PT1H",
+    add_last_point=True,
+    auto_play=True,
+    loop=False,
+    date_options="YYYY-MM-DD HH:mm",
+    time_slider_drag_update=True
+).add_to(m2)
 
-    st_folium(m2, width=800, height=500)
+st_folium(m2, width=800, height=500)
 
 # ─── 6. STATS PAGE ──────────────────────────────────────────
 elif st.session_state.page == "Stats":
