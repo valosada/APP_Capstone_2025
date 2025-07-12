@@ -159,8 +159,9 @@ elif st.session_state.page == "Map":
 
     st.markdown("---")
 
-    # ── 5.2 Animated availability map ────────────────────────
+# ── 5.2 Animated availability map ────────────────────────
     st.subheader("⏱️ Animated Map: Bike Availability Over Time")
+
     @st.cache_data
     def load_availability():
         base = os.path.dirname(__file__)
@@ -171,11 +172,12 @@ elif st.session_state.page == "Map":
             encoding="utf-8-sig",
             sep=","
         )
-        # clean column names
+        # Limpia posibles espacios/BOM en cabeceras
         df.columns = df.columns.str.strip().str.replace('\ufeff','')
-        st.write("📋 Columns read from availability.csv:", df.columns.tolist())
+        # (opcional) debug
+        st.write("📋 Columns availability:", df.columns.tolist())
 
-        # rename common variants
+        # ajusta si tus columnas vienen con otros nombres
         rename_map = {}
         if "station_name" in df.columns: rename_map["station_name"] = "name"
         if "lat" in df.columns:           rename_map["lat"] = "latitude"
@@ -193,26 +195,33 @@ elif st.session_state.page == "Map":
         return df.dropna(subset=["available_bikes"])
 
     avail = load_availability()
+
+    # Construye los features con style + icon:"circle"
     features = []
     def bike_color(n):
         return "#2ECC71" if n>=10 else "#F1C40F" if n>=5 else "#E74C3C"
 
     for _, r in avail.iterrows():
         features.append({
-            "type":"Feature",
-            "geometry":{"type":"Point","coordinates":[r["longitude"],r["latitude"]]},
-            "properties":{
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [r["longitude"], r["latitude"]]
+            },
+            "properties": {
                 "time": r["time"].strftime("%Y-%m-%dT%H:%M:%S"),
-                "style":{
-                    "color": bike_color(r["available_bikes"]),
-                    "fillColor": bike_color(r["available_bikes"]),
-                    "radius": 6
+                "icon": "circle",            # <-- esto es clave
+                "style": {
+                    "color":    bike_color(r["available_bikes"]),
+                    "fillColor":bike_color(r["available_bikes"]),
+                    "radius":   6
                 },
                 "popup": f"{r['name']}<br>Available: {r['available_bikes']}"
             }
         })
 
     time_geojson = {"type":"FeatureCollection","features":features}
+
     m2 = folium.Map(location=[41.3851, 2.1734], zoom_start=13)
     TimestampedGeoJson(
         data=time_geojson,
