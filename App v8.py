@@ -107,13 +107,13 @@ if st.session_state.page == "Home":
           </div>
         """, unsafe_allow_html=True)
     else:
-        st.error(f"Logo not found at assets/UB logo.png")
+        st.error("Logo not found at assets/UB logo.png")
 
 # ─── 5. MAP PAGE ────────────────────────────────────────────
 elif st.session_state.page == "Map":
     st.header("🗺️ Map Views")
 
-    # ─ 5.1 Static map with New/Old filter ──────────────────
+    # ── 5.1 Static map with New/Old filter ──────────────────
     st.subheader("🚩 Static Map: Filter by Station Type")
     @st.cache_data
     def load_markers():
@@ -139,10 +139,10 @@ elif st.session_state.page == "Map":
         m1 = folium.Map(location=[41.3851, 2.1734], zoom_start=13)
         cluster = MarkerCluster(disableClusteringAtZoom=14, maxClusterRadius=30).add_to(m1)
         BASE = os.path.dirname(__file__)
-        def make_url(fn,m):
+        def make_url(fn, mime):
             fp = os.path.join(BASE, "assets", fn)
             b64 = base64.b64encode(open(fp,"rb").read()).decode("utf-8")
-            return f"data:{m};base64,{b64}"
+            return f"data:{mime};base64,{b64}"
         icon_red   = CustomIcon(icon_image=make_url("bicing-logo-red.svg","image/svg+xml"),
                                 icon_size=(20,20), icon_anchor=(10,20))
         icon_green = CustomIcon(icon_image=make_url("bicing-logo-green.png","image/png"),
@@ -159,27 +159,36 @@ elif st.session_state.page == "Map":
 
     st.markdown("---")
 
-    # ─ 5.2 Animated availability map ────────────────────────
+    # ── 5.2 Animated availability map ────────────────────────
     st.subheader("⏱️ Animated Map: Bike Availability Over Time")
     @st.cache_data
     def load_availability():
         base = os.path.dirname(__file__)
         path = os.path.join(base, "data", "availability.csv")
-        df = pd.read_csv(path, parse_dates=["time"], encoding="latin1")
-        # Rename if needed: ensure correct columns
-        df = df.rename(columns={
-            # adjust these keys if your CSV headers differ
-            "station_name":"name",
-            "time":"time",
-            "available_bikes":"available_bikes",
-            "lat":"latitude",
-            "lon":"longitude"
-        })
-        for col in ["name","latitude","longitude","time","available_bikes"]:
-            if col not in df.columns:
-                st.error(f"Column '{col}' missing in availability.csv")
-                st.stop()
-        df = df.dropna(subset=["latitude","longitude","time","available_bikes"])
+        df = pd.read_csv(
+            path,
+            parse_dates=["time"],
+            encoding="utf-8-sig",
+            sep=","
+        )
+        # clean column names
+        df.columns = df.columns.str.strip().str.replace('\ufeff','')
+        st.write("📋 Columns read from availability.csv:", df.columns.tolist())
+
+        # rename common variants
+        rename_map = {}
+        if "station_name" in df.columns: rename_map["station_name"] = "name"
+        if "lat" in df.columns:           rename_map["lat"] = "latitude"
+        if "lon" in df.columns:           rename_map["lon"] = "longitude"
+        df = df.rename(columns=rename_map)
+
+        required = ["name","latitude","longitude","time","available_bikes"]
+        missing = [c for c in required if c not in df.columns]
+        if missing:
+            st.error(f"🚨 Missing columns in availability.csv: {missing}")
+            st.stop()
+
+        df = df.dropna(subset=required)
         df["available_bikes"] = pd.to_numeric(df["available_bikes"], errors="coerce")
         return df.dropna(subset=["available_bikes"])
 
@@ -229,7 +238,7 @@ elif st.session_state.page == "Stats":
 elif st.session_state.page == "Team":
     st.header("👥 Meet the Team")
     team = [
-        {"name":"Agustín Jaime",   "img":"assets/agustin.jpg"},
+        {"name":"Agustín Jaime",    "img":"assets/agustin.jpg"},
         {"name":"Javier Verba",     "img":"assets/javier.jpg"},
         {"name":"Mariana Henriques","img":"assets/mariana.jpg"},
         {"name":"Victoria Losada",  "img":"assets/vicky.jpg"},
