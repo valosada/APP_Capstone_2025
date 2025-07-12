@@ -157,7 +157,7 @@ elif st.session_state.page == "Map":
 
     st.markdown("---")
 
-    # 5.2 Animated availability map with merge
+  # ─── 5.2 Animated availability map with flexible merge ───
     st.subheader("⏱️ Animated Map: Bike Availability Over Time")
 
     @st.cache_data
@@ -165,69 +165,107 @@ elif st.session_state.page == "Map":
         base = os.path.dirname(__file__)
         path = os.path.join(base, "data", "availability.csv")
         df = pd.read_csv(path, parse_dates=["time"], encoding="utf-8-sig")
+        # Limpia cabeceras
         df.columns = df.columns.str.strip().str.replace('\ufeff','')
-        st.write("🔍 Columns in availability.csv:", df.columns.tolist())
-        # rename common variants
-        rename_map = {}
-        if "station_id" in df.columns: rename_map["station_id"] = "station_id"
-        if "available_bikes" in df.columns: rename_map["available_bikes"] = "available_bikes"
-        df = df.rename(columns=rename_map)
-        df["station_id"] = pd.to_numeric(df["station_id"], errors="coerce").astype("Int64")
+        st.write("🔍 Cols availability:", df.columns.tolist())
+
+        # Detecta columna ID vs NAME
+        if "station_id" in df.columns:
+            df["station_id"] = pd.to_numeric(df["station_id"], errors="coerce").astype("Int64")
+        elif "name" not in df.columns:
+            st.error("availability.csv debe tener 'station_id' o 'name'")
+            st.stop()
+
+        # Asegura disponibilidad
+        if "available_bikes" not in df.columns:
+            st.error("availability.csv no tiene columna 'available_bikes'")
+            st.stop()
         df["available_bikes"] = pd.to_numeric(df["available_bikes"], errors="coerce")
-        return df.dropna(subset=["station_id","time","available_bikes"])
+
+        return df.dropna(subset=["time","available_bikes"])
 
     @st.cache_data
-    def load_markers_for_merge():
+    def load_markers():
         base = os.path.dirname(__file__)
         path = os.path.join(base, "data", "markers.csv")
         df = pd.read_csv(path, encoding="latin1")
         df.columns = df.columns.str.strip().str.replace('\ufeff','')
-        # assume station_id present
-        df.columns = ["station_id","name","latitude","longitude","description","type"]
-        df["station_id"] = pd.to_numeric(df["station_id"], errors="coerce").astype("Int64")
-        df["latitude"]   = pd.to_numeric(df["latitude"], errors="coerce")
-        df["longitude"]  = pd.to_numeric(df["longitude"], errors="coerce")
-        return df.dropna(subset=["station_id","latitude","longitude"])[
-            ["station_id","name","latitude","longitude"]
-        ]
+        st.write("🔍 Cols markers:", df.columns.tolist())
 
-    avail_df = load_availability()
-    markers_for_merge = load_markers_for_merge()
-    merged = pd.merge(avail_df, markers_for_merge, on="station_id", how="inner")
-    if merged.empty:
-        st.error("No data after merging markers & availability.")
+        # Detecta ID vs NAME
+        if "station_id" in df.columns:
+            df["station_id"] = pd.to_numeric(df["station_id"], errors="coerce").astype("Int64")
+        elif "name" not in df.columns:
+            st.error("markers.csv debe tener 'station_id' o 'name'")
+            st.stop()
+
+        # Si no hay lat/lon como columnas explícitas, para simplificar asumimos
+        # que las cabeceras correctas ya están presentes
+        for c in ("latitude","longitude"):
+            if c not in df.columns:
+                st.error(f"markers.csv no tiene columna '{c}'")
+                st.stop()
+            df[c] = pd.to_numeric(df[c], errors="coerce")
+
+        return df.dropna(subset=["latitude","longitude"])
+
+    # Cargo datasets
+    avail = load_availability()
+    marks = load_markers()
+
+    # Elijo clave de merge: si tengo station_id en ambos uso ese, else uso name
+    if "station_id" in avail.columns and "station_id" in marks.columns:
+        on = "station_id"
     else:
-        features = []
-        def bike_color(n):
-            return "#2ECC71" if n>=10 else "#F1C40F" if n>=5 else "#E74C3C"
-        for _, r in merged.iterrows():
-            features.append({
-                "type":"Feature",
-                "geometry":{"type":"Point","coordinates":[r["longitude"], r["latitude"]]},
-                "properties":{
-                    "time": r["time"].strftime("%Y-%m-%dT%H:%M:%S"),
-                    "icon": "circle",
-                    "style":{
-                        "color":    bike_color(r["available_bikes"]),
-                        "fillColor":bike_color(r["available_bikes"]),
-                        "radius":   6
-                    },
-                    "popup": f"{r['name']}<br>Available: {r['available_bikes']}"
-                }
-            })
-        time_geojson = {"type":"FeatureCollection","features":features}
-        m2 = folium.Map(location=[41.3851, 2.1734], zoom_start=13)
-        TimestampedGeoJson(
-            data=time_geojson,
-            transition_time=200,
-            period="PT1H",
-            add_last_point=True,
-            auto_play=True,
-            loop=False,
-            date_options="YYYY-MM-DD HH:mm",
-            time_slider_drag_update=True
-        ).add_to(m2)
-        st_folium(m2, width=800, height=500)
+        on = "name"
+
+    merged = pd.merge(
+        avail,
+        marks[ [on, "name", "latitude", "longitude"] ].rename(columns={on:"merge_key"}),
+        left_on=on, right_on="merge_key",
+        how="inner"
+    )
+
+    if merged.empty:
+        st.error("No hay datos tras merge de availability y markers.")
+        st.stop()
+
+    # Construye GeoJSON
+    features = []
+    def bike_color(n):
+        return "#2ECC71" if n>=10 else "#F1C40F" if n>=5 else "#E74C3C"
+
+    for _, r in merged.iterrows():
+        features.append({
+            "type":"Feature",
+            "geometry":{"type":"Point","coordinates":[r["longitude"], r["latitude"]]},
+            "properties":{
+                "time": r["time"].strftime("%Y-%m-%dT%H:%M:%S"),
+                "icon": "circle",
+                "style":{
+                    "color":    bike_color(r["available_bikes"]),
+                    "fillColor":bike_color(r["available_bikes"]),
+                    "radius":   6
+                },
+                "popup": f"{r['name']}<br>Available: {r['available_bikes']}"
+            }
+        })
+
+    time_geojson = {"type":"FeatureCollection","features":features}
+
+    m2 = folium.Map(location=[41.3851, 2.1734], zoom_start=13)
+    TimestampedGeoJson(
+        data=time_geojson,
+        transition_time=200,
+        period="PT1H",
+        add_last_point=True,
+        auto_play=True,
+        loop=False,
+        date_options="YYYY-MM-DD HH:mm",
+        time_slider_drag_update=True
+    ).add_to(m2)
+
+    st_folium(m2, width=800, height=500)
 
 # ─── 6. STATS PAGE ──────────────────────────────────────────
 elif st.session_state.page == "Stats":
