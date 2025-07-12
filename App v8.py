@@ -192,64 +192,106 @@ if st.session_state.page == "Home":
 
 # ─── 5. MAP ─────────────────────────────────────────────────
 elif st.session_state.page == "Map":
-    st.header("🗺️ Interactive Map of Bicing Stations")
+    st.header("🗺️ Map Views")
 
+    # ─── 5.1 Mapa estático con filtro por tipo ────────────────
+    st.subheader("🚩 Static Map: Filter by Station Type")
     @st.cache_data
     def load_markers(path="data/markers.csv") -> pd.DataFrame:
-        df = pd.read_csv(path, encoding="latin1", sep=",")
+        base = os.path.dirname(__file__)
+        csv_path = os.path.join(base, "data", "markers.csv")
+        df = pd.read_csv(csv_path, encoding="latin1", sep=",")
         df.columns = ["name","latitude","longitude","description","type"]
-        df["type"] = df["type"].astype(str).str.strip().str.lower()
+        df["type"] = df["type"].str.strip().str.lower()
         df = df.dropna(subset=["latitude","longitude"])
         df["latitude"]  = pd.to_numeric(df["latitude"], errors="coerce")
         df["longitude"] = pd.to_numeric(df["longitude"], errors="coerce")
         return df.dropna(subset=["latitude","longitude"]).reset_index(drop=True)
 
     markers_df = load_markers()
-    if markers_df.empty:
-        st.error("No data found in data/markers.csv")
-        st.stop()
-
-    # columnas: mapa | filtro
-    map_col, filter_col = st.columns([3, 1], gap="medium")
-
-    # filtro
+    # Dos columnas: mapa estático | filtro
+    map_col, filter_col = st.columns([3,1], gap="medium")
     with filter_col:
         st.markdown("#### Filter stations by type")
-        types = ["new", "old"]
-        selected = st.multiselect(
-            "Station Type",
-            options=types,
-            default=types,
-            format_func=lambda t: "🟢 New" if t == "new" else "🔴 Old"
-        )
-        filtered = markers_df[markers_df["type"].isin(selected)]
-        if filtered.empty:
-            st.error("No stations match this filter.")
-
-    # mapa
+        types = ["new","old"]
+        sel = st.multiselect("Station Type", options=types, default=types,
+                              format_func=lambda t: "🟢 New" if t=="new" else "🔴 Old")
+    filtered = markers_df[markers_df["type"].isin(sel)]
     with map_col:
-        df = filtered if not filtered.empty else markers_df
-        # prepare icons
+        m1 = folium.Map(location=[41.3851,2.1734], zoom_start=13)
+        cluster = MarkerCluster(disableClusteringAtZoom=14, maxClusterRadius=30).add_to(m1)
+        # pre-carga iconos
         BASE = os.path.dirname(__file__)
-        def make_data_url(fn, mime):
-            b64 = base64.b64encode(open(os.path.join(BASE, fn), "rb").read()).decode("utf-8")
-            return f"data:{mime};base64,{b64}"
+        def make_data_url(fn,mime):
+            return "data:{};base64,{}".format(
+                mime,
+                base64.b64encode(open(os.path.join(BASE,"assets",fn),"rb").read()).decode("utf-8")
+            )
+        icon_red   = CustomIcon(icon_image=make_data_url("bicing-logo-red.svg","image/svg+xml"),
+                                icon_size=(20,20),icon_anchor=(10,20))
+        icon_green = CustomIcon(icon_image=make_data_url("bicing-logo-green.png","image/png"),
+                                icon_size=(20,20),icon_anchor=(10,20))
+        for _, r in filtered.iterrows():
+            ico = icon_green if r["type"]=="new" else icon_red
+            folium.Marker([r["latitude"],r["longitude"]],
+                          popup=f"{r['name']} ({r['type']})",
+                          icon=ico).add_to(cluster)
+        st_folium(m1, width=800, height=500)
 
-        url_red   = make_data_url("bicing-logo-red.svg", "image/svg+xml")
-        url_green = make_data_url("bicing-logo-green.png", "image/png")
-        icon_red   = CustomIcon(icon_image=url_red,   icon_size=(20,20), icon_anchor=(10,20))
-        icon_green = CustomIcon(icon_image=url_green, icon_size=(20,20), icon_anchor=(10,20))
+    st.markdown("---")
 
-        m = folium.Map(location=[41.3851,2.1734], zoom_start=13)
-        cluster = MarkerCluster(disableClusteringAtZoom=14, maxClusterRadius=30).add_to(m)
-        for _, r in df.iterrows():
-            ico = icon_green if r["type"] == "new" else icon_red
-            folium.Marker(
-                location=[r["latitude"], r["longitude"]],
-                popup=f"<b>{r['name']}</b><br>{r['description']}<br><i>Type: {r['type']}</i>",
-                icon=ico
-            ).add_to(cluster)
-        st_folium(m, width=800, height=600)
+    # ─── 5.2 Mapa animado de disponibilidad ───────────────────
+    st.subheader("⏱️ Animated Map: Bike Availability Over Time")
+    @st.cache_data
+    def load_availability(path="data/availability.csv") -> pd.DataFrame:
+        base = os.path.dirname(__file__)
+        csv_path = os.path.join(base, "data", "availability.csv")
+        df = pd.read_csv(csv_path, parse_dates=["time"], encoding="latin1")
+        df = df.dropna(subset=["latitude","longitude","time","available_bikes"])
+        df["available_bikes"] = pd.to_numeric(df["available_bikes"], errors="coerce")
+        return df.dropna(subset=["available_bikes"]).reset_index(drop=True)
+
+    avail = load_availability()
+    if avail.empty:
+        st.error("No availability data found in data/availability.csv")
+    else:
+        # build GeoJSON features
+        def bike_color(n):
+            return "#2ECC71" if n>=10 else "#F1C40F" if n>=5 else "#E74C3C"
+
+        features = []
+        for _, r in avail.iterrows():
+            features.append({
+                "type": "Feature",
+                "geometry": {"type": "Point", "coordinates": [r["longitude"], r["latitude"]]},
+                "properties": {
+                    "time": r["time"].strftime("%Y-%m-%dT%H:%M:%S"),
+                    "style": {
+                        "color": bike_color(r["available_bikes"]),
+                        "fillColor": bike_color(r["available_bikes"]),
+                        "radius": 6
+                    },
+                    "popup": f"{r['name']}<br>Available: {r['available_bikes']}"
+                }
+            })
+        time_geojson = {"type":"FeatureCollection","features":features}
+
+        # render animated map
+        m2 = folium.Map(location=[41.3851,2.1734], zoom_start=13)
+        from folium.plugins import TimestampedGeoJson
+        TimestampedGeoJson(
+            data=time_geojson,
+            transition_time=200,
+            period="PT1H",
+            add_last_point=True,
+            auto_play=True,
+            loop=False,
+            date_options="YYYY-MM-DD HH:mm",
+            time_slider_drag_update=True
+        ).add_to(m2)
+
+        st_folium(m2, width=800, height=500)
+
 
 # ─── 6. STATS ───────────────────────────────────────────────
 elif st.session_state.page == "Stats":
@@ -270,3 +312,4 @@ elif st.session_state.page == "Team":
         with col:
             st.image(member["img"], width=250)
             st.markdown(f"**{member['name']}**")
+
