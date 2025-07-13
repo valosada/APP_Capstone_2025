@@ -329,29 +329,34 @@ elif st.session_state.page == "Stats":
 
     df = load_data()
 
-    # 2) Barra lateral: filtros
-    st.sidebar.header("Filtros")
+    # ─── 2) Controles principales arriba ───────────────────────
     estaciones = sorted(df["name"].dropna().unique())
-    sel_station = st.sidebar.selectbox("Estación", estaciones)
+    sel_station = st.selectbox("Estación", estaciones)
 
-    # Filtro de fechas
-    min_date = df["time"].dt.date.min()
-    max_date = df["time"].dt.date.max()
-    sel_dates = st.sidebar.date_input(
+    # Selector de rango de fechas en línea
+    dates = sorted(df["time"].dt.date.unique())
+    sel_dates = st.select_slider(
         "Rango de fechas",
-        value=[min_date, max_date],
-        min_value=min_date,
-        max_value=max_date
+        options=dates,
+        value=(dates[0], dates[-1]),
+        format_func=lambda d: d.strftime("%Y-%m-%d")
     )
 
-    # Filtro de horas
-    sel_hour = st.sidebar.slider("Rango de horas", 0, 23, (0,23))
+    # Selector de rango de horas en línea
+    sel_hours = st.slider(
+        "Rango de horas",
+        min_value=0, max_value=23,
+        value=(0,23),
+        help="Selecciona el intervalo de horas a analizar"
+    )
 
-    # 3) Aplica filtros
+    st.markdown("---")
+
+    # 3) Filtrado
     mask = (
         (df["name"] == sel_station) &
         (df["time"].dt.date.between(sel_dates[0], sel_dates[1])) &
-        (df["time"].dt.hour.between(sel_hour[0], sel_hour[1]))
+        (df["time"].dt.hour.between(sel_hours[0], sel_hours[1]))
     )
     sub = df[mask]
     if sub.empty:
@@ -360,8 +365,8 @@ elif st.session_state.page == "Stats":
 
     # 4) KPIs generales
     col1, col2, col3 = st.columns(3)
+    dias = (sel_dates[1] - sel_dates[0]).days + 1
     with col1:
-        dias = (sel_dates[1] - sel_dates[0]).days + 1
         st.metric("📅 Días seleccionados", f"{dias}")
     with col2:
         avg_disp = sub["available_bikes"].mean().round(1)
@@ -387,13 +392,13 @@ elif st.session_state.page == "Stats":
 
     # 6) Heatmap día de semana vs hora
     st.subheader("🔥 Heatmap: Día de Semana vs Hora")
-    sub = sub.copy()
-    sub["weekday"] = sub["time"].dt.day_name().str[:3]  # Lun, Mar...
+    temp = sub.copy()
+    temp["weekday"] = temp["time"].dt.day_name().str[:3]  # Lun, Mar...
     heat = (
-        sub
+        temp
         .pivot_table(
             index="weekday",
-            columns=sub["time"].dt.hour,
+            columns=temp["time"].dt.hour,
             values="available_bikes",
             aggfunc="mean"
         )
