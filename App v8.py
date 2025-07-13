@@ -454,7 +454,6 @@ elif st.session_state.page == "Ranking":
     # Calculamos variación media absoluta
     df_sorted = (
         df
-        .head(10)
         .sort_values(["station_id","time"])
         .groupby("station_id")["available_bikes"]
         .apply(lambda s: s.diff().abs().mean())
@@ -467,11 +466,20 @@ elif st.session_state.page == "Ranking":
         .merge(names, on="station_id")
         .sort_values("mean_variation", ascending=False)
         .head(10)
+        .reset_index(drop=True)          # índice 0–9
     )
+    
+  # Insertamos la columna de ranking
+    top10.insert(0, "Rank", top10.index + 1)
+    
+    # Redondeamos la variación y renombramos
     top10["mean_variation"] = top10["mean_variation"].round(1)
     st.table(top10[["station_id","name","mean_variation"]].rename(
         columns={"station_id":"ID","name":"Station","mean_variation":"Median"}))
-
+    
+    # Mostramos la tabla con Rank 1–10
+    st.table(top10[["Rank","ID","Estación","Varia. media"]])
+  
     st.markdown("---")
 
     # 2️⃣ Estaciones Problema
