@@ -172,7 +172,7 @@ elif st.session_state.page == "Maps":
         # Mostrás el mapa
         st_folium(m, width=800, height=600)
 
-      st.markdown("---")
+        st.markdown("---")
 
     # 4.2 Animated Map: Availability Over Time
     st.subheader("⏱️ Bikes availability over time")
