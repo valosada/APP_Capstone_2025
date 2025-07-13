@@ -175,7 +175,7 @@ elif st.session_state.page == "Map":
     st.markdown("---")
 
     # 4.2 Animated Map: Availability Over Time
-    st.subheader("⏱️ Animated Map: Availability Over Time")
+    st.subheader("⏱️ Bikes availability over time")
 
     @st.cache_data
     def load_availability():
