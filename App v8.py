@@ -352,9 +352,9 @@ elif st.session_state.page == "Stats":
 elif st.session_state.page == "Team":
     st.header("👥 Meet the Team")
     team = [
-        {"name":"Agustín Jaime","img":"assets/agustin.jpg"},
-        {"name":"Javier Verba","img":"assets/javier.jpg"},
-        {"name":"Mariana Henriques","img":"assets/mariana.jpg"},
+        {"name":"Agustín Jaime","img":"assets/vicky.jpg"},
+        {"name":"Javier Verba","img":"assets/vicky.jpg"},
+        {"name":"Mariana Henriques","img":"assets/vicky.jpg"},
         {"name":"Victoria Losada","img":"assets/vicky.jpg"},
     ]
     cols = st.columns(4, gap="small")
