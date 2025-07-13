@@ -353,9 +353,9 @@ elif st.session_state.page == "Team":
     st.header("👥 Meet the Team")
     team = [
     {"name": "Agustín Jaime", "img": "vicky.jpg"},
-    {"name": "Javier Verba",              "img": "vicky.png"},
-    {"name": "Mariana Henriques",              "img": "vicky.png"},
-    {"name": "Victoria Losada"",              "img": "vicky.png"},
+    {"name": "Javier Verba", "img": "vicky.png"},
+    {"name": "Mariana Henriques", "img": "vicky.png"},
+    {"name": "Victoria Losada"", "img": "vicky.png"}
     ]
     
     for member in team:
