@@ -57,13 +57,13 @@ st.markdown("---")
 
 # ─── 4. HOME PAGE ───────────────────────────────────────────
 if st.session_state.page == "Home":
-    st.header("🏠 Welcome to the project")
+    st.header("🏠 Welcome 'Bike Availability Prediction' Capstone Project")
     st.write("""
       A comprehensive analysis of Barcelona's bike sharing system, exploring usage patterns,
       station optimization, and urban mobility insights through data science and machine learning.
-      - 🚏 Explore an interactive map of Bicing stations.  
-      - 📊 View key usage statistics.  
-      - 👥 Meet the project team.
+      - 🚏 Explore interactive maps  
+      - 📊 View key usage statistics  
+      - 👥 Meet the project team
     """)
 
     st.markdown("<h2 style='text-align:center; margin-top:40px;'>Overview</h2>", unsafe_allow_html=True)
@@ -76,7 +76,7 @@ if st.session_state.page == "Home":
 
     o1, o2, o3 = st.columns(3, gap="large")
     with o1:
-        st.markdown("### 🚏 Station Analysis")
+        st.markdown("### 📍 Station Analysis")
         st.write("Mapping and analysis of bike station locations and capacities.")
     with o2:
         st.markdown("### 📈 Usage Patterns")
