@@ -480,6 +480,7 @@ elif st.session_state.page == "Ranking":
     # 2a) Vacías crónicamente: >50% registros con 0 bicis
     vacias = (
         df
+        .tail(10)
         .assign(is_empty=lambda d: d["available_bikes"]==0)
         .groupby("station_id")["is_empty"]
         .mean()
