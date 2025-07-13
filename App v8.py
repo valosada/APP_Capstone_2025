@@ -1,7 +1,7 @@
 # app.py
 
 import os
-import requests
+import requests, io
 import base64
 import streamlit as st
 import pandas as pd
