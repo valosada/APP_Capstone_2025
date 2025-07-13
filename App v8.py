@@ -483,7 +483,7 @@ elif st.session_state.page == "Ranking":
         .groupby("station_id")["is_empty"]
         .mean()
         .reset_index(name="empty_ratio")
-        .query("empty_ratio > 0.5")
+        .query("empty_ratio > 0.3")
         .merge(names, on="station_id")
         .sort_values("empty_ratio", ascending=False)
     )
@@ -499,7 +499,7 @@ elif st.session_state.page == "Ranking":
         .groupby("station_id")["is_full"]
         .mean()
         .reset_index(name="full_ratio")
-        .query("full_ratio > 0.5")
+        .query("full_ratio > 0.3")
         .merge(names, on="station_id")
         .sort_values("full_ratio", ascending=False)
     )
