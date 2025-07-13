@@ -268,14 +268,24 @@ elif st.session_state.page == "Spatial analysis":
 elif st.session_state.page == "Stats":
     st.header("📊 Usage Statistics")
 
-    # Cargar datos
+    # Cargar datos desde uploader en lugar de disco
     @st.cache_data
-    def load_data():
-        df = pd.read_csv("bicing_interactive_dataset.csv", parse_dates=["time"])
+    def load_data(uploaded_file):
+        df = pd.read_csv(uploaded_file, parse_dates=["time"], encoding="utf-8")
         df = df.dropna(subset=["latitude", "longitude"])
         return df
     
-    df = load_data()
+    # Pide al usuario que suba el CSV
+    uploaded_file = st.file_uploader(
+        "🔃 Sube el dataset `bicing_interactive_dataset.csv`", 
+        type="csv"
+    )
+    if not uploaded_file:
+        st.warning("⚠️ Por favor sube el CSV para continuar.")
+        st.stop()
+    
+    # Una vez subido, carga los datos
+    df = load_data(uploaded_file)
     
     # Filtros en la barra lateral
     st.sidebar.header("Filtros")
