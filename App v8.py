@@ -330,8 +330,23 @@ elif st.session_state.page == "Stats":
     df = load_data()
 
     # ─── 2) Controles principales arriba ───────────────────────
-    estaciones = sorted(df["name"].dropna().unique())
-    sel_station = st.selectbox("Estación", estaciones)
+    # Preparamos la lista de opciones: primero "Todas", luego "ID - Nombre"
+    unique_stations = (
+        df[["station_id","name"]]
+        .drop_duplicates()
+        .sort_values(["station_id"])
+    )
+    station_options = ["Todas las estaciones"] + [
+        f"{row.station_id} - {row.name}"
+        for row in unique_stations.itertuples()
+    ]
+    sel_label = st.selectbox("Estación", station_options)
+
+    # Extraemos station_id si no es "Todas"
+    if sel_label == "Todas las estaciones":
+        sel_station_id = None
+    else:
+        sel_station_id = int(sel_label.split(" - ", 1)[0])
 
     # Selector de rango de fechas en línea
     dates = sorted(df["time"].dt.date.unique())
@@ -354,9 +369,9 @@ elif st.session_state.page == "Stats":
 
     # 3) Filtrado
     mask = (
-        (df["name"] == sel_station) &
-        (df["time"].dt.date.between(sel_dates[0], sel_dates[1])) &
-        (df["time"].dt.hour.between(sel_hours[0], sel_hours[1]))
+        ((df["station_id"] == sel_station_id) if sel_station_id is not None else True) &
+        df["time"].dt.date.between(sel_dates[0], sel_dates[1]) &
+        df["time"].dt.hour.between(sel_hours[0], sel_hours[1])
     )
     sub = df[mask]
     if sub.empty:
@@ -393,7 +408,7 @@ elif st.session_state.page == "Stats":
     # 6) Heatmap día de semana vs hora
     st.subheader("🔥 Heatmap: Día de Semana vs Hora")
     temp = sub.copy()
-    temp["weekday"] = temp["time"].dt.day_name().str[:3]  # Lun, Mar...
+    temp["weekday"] = temp["time"].dt.day_name().str[:3]
     heat = (
         temp
         .pivot_table(
