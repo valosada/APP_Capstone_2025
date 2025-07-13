@@ -454,7 +454,7 @@ elif st.session_state.page == "Ranking":
     # Calculamos variación media absoluta
     df_sorted = (
         df
-        .tail(10)
+        .head(10)
         .sort_values(["station_id","time"])
         .groupby("station_id")["available_bikes"]
         .apply(lambda s: s.diff().abs().mean())
