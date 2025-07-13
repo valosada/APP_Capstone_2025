@@ -57,7 +57,7 @@ st.markdown("---")
 
 # ─── 4. HOME PAGE ───────────────────────────────────────────
 if st.session_state.page == "Home":
-    st.header("🏠 Welcome 'Bike Availability Prediction' Capstone Project")
+    st.header("🏠 Welcome to 'Bike Availability Prediction' Capstone Project")
     st.write("""
       A comprehensive analysis of Barcelona's bike sharing system, exploring usage patterns,
       station optimization, and urban mobility insights through data science and machine learning.
