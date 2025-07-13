@@ -358,10 +358,18 @@ elif st.session_state.page == "Team":
         {"name":"Victoria Losada","img":"assets/vicky.jpg"},
     ]
     cols = st.columns(4, gap="small")
+  
     for member in team:
-        img_path = os.path.join("assets", member["img"])
-        if os.path.exists(img_path):
-            st.image(img_path, width=150)
-        else:
-            st.warning(f"⚠️ No se encontró la imagen '{member['img']}'")
-        st.write(f"**{member['name']}** — {member['role']}")
+    name = member.get("name", "Sin nombre")
+    role = member.get("role", "—")             # si no existe 'role', muestra guión
+    img_file = member.get("img")
+    img_path = os.path.join("assets", img_file) if img_file else None
+
+    # Mostrar imagen si existe
+    if img_path and os.path.exists(img_path):
+        st.image(img_path, width=150)
+    else:
+        st.info(f"Imagen no encontrada: {img_file}")
+
+    # Mostrar nombre y rol sin romperse
+    st.markdown(f"**{name}** — {role}")
