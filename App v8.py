@@ -431,6 +431,67 @@ elif st.session_state.page == "Stats":
 
     st.markdown("---")
 
+    # ─── 9) Comportamiento específico por estación ────────────────
+    st.subheader("🔍 Comportamiento por estación")
+    
+    # 1) Prepara lista de estaciones (con ID si lo deseas)
+    unique_stations = (
+        df[["station_id","name"]]
+        .drop_duplicates()
+        .sort_values("station_id")
+    )
+    station_options = [
+        f"{row.station_id} - {row.name}"
+        for row in unique_stations.itertuples()
+    ]
+    
+    # 2) Selector (hasta 4)
+    sel_four = st.multiselect(
+        "Selecciona hasta 4 estaciones:",
+        options=station_options,
+        default=station_options[:4]
+    )
+    if not sel_four:
+        st.info("Selecciona al menos una estación.")
+        st.stop()
+    if len(sel_four) > 4:
+        st.warning("Solo puedes comparar hasta 4 estaciones.")
+        sel_four = sel_four[:4]
+    
+    # 3) Convertir etiquetas en IDs numéricos
+    selected_ids = [int(s.split(" - ",1)[0]) for s in sel_four]
+    
+    # 4) Prepara cuadrícula 2×2
+    cols = st.columns(2)
+    for i, station_id in enumerate(selected_ids):
+        # Filtrar datos para esta estación y rango de fechas/horas ya aplicado
+        df_sta = sub[sub["station_id"] == station_id]
+    
+        # Si no hay datos, avisar
+        if df_sta.empty:
+            with cols[i%2]:
+                st.warning(f"No hay datos para la estación {sel_four[i]}.")
+            continue
+    
+        # Agrupar por fecha y hora (o simplemente por time si prefieres serie completa)
+        # Aquí sacamos media diaria
+        serie = (
+            df_sta
+            .groupby("time")["available_bikes"]
+            .mean()
+            .reset_index()
+        )
+    
+        # 5) Dibujar gráfico
+        with cols[i%2]:
+            st.markdown(f"**{sel_four[i]}**")
+            fig, ax = plt.subplots()
+            ax.plot(serie["time"], serie["available_bikes"], marker=".", linewidth=1)
+            ax.set_xlabel("Fecha y hora")
+            ax.set_ylabel("Bicis disponibles")
+            ax.tick_params(axis="x", rotation=45)
+            st.pyplot(fig)
+
 # ─── 7. RANKING ───────────────────────────────────────────────
 elif st.session_state.page == "Ranking":
     st.header("🏆 Stations")
