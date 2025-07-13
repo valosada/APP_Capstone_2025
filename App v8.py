@@ -431,6 +431,82 @@ elif st.session_state.page == "Stats":
 
     st.markdown("---")
 
+st.subheader("🔌 Comparativa: Estaciones Clásicas vs Eléctricas")
+
+    # Asegurémonos de que existe la columna
+    if "physical_configuration" not in df.columns:
+        st.error("❌ No encuentro la columna 'physical_configuration' en el dataset.")
+    else:
+        # 1) Rellenamos nulos y simplificamos categorías
+        df["station_type"] = (
+            df["physical_configuration"]
+              .fillna("unknown")
+              .str.replace("_station","", regex=False)
+              .str.capitalize()
+        )
+
+        # 2) Métrica global: disponibilidad media por tipo
+        agg_type = (
+            df
+            .groupby("station_type")["available_bikes"]
+            .mean()
+            .round(1)
+            .reset_index()
+            .rename(columns={"available_bikes":"Disponibilidad Media"})
+        )
+        st.markdown("**Disponibilidad media global**")
+        st.table(agg_type.set_index("station_type"))
+
+        st.markdown("---")
+
+        # 3) Patrones horarios por tipo (línea)
+        st.markdown("**Patrón horario de disponibilidad**")
+        hourly_type = (
+            df
+            .groupby([df["time"].dt.hour, "station_type"])["available_bikes"]
+            .mean()
+            .unstack("station_type")
+        )
+        fig3, ax3 = plt.subplots()
+        for col in hourly_type.columns:
+            ax3.plot(hourly_type.index, hourly_type[col], label=col)
+        ax3.set_xlabel("Hora del día")
+        ax3.set_ylabel("Bicis disponibles (media)")
+        ax3.set_xticks(range(0,24))
+        ax3.legend(title="Tipo de estación")
+        st.pyplot(fig3)
+
+        st.markdown("---")
+
+        # 4) Heatmap comparativo por día de semana y tipo
+        st.markdown("**Heatmap comparativo**")
+        # pivot: index weekday, columns (hour, type)
+        comp = (
+            df.assign(weekday=df["time"].dt.day_name().str[:3])
+              .pivot_table(
+                 index="weekday",
+                 columns=["station_type", df["time"].dt.hour],
+                 values="available_bikes",
+                 aggfunc="mean"
+              )
+              .reindex(["Mon","Tue","Wed","Thu","Fri","Sat","Sun"])
+        )
+        # Mostramos dos heatmaps lado a lado
+        types = comp.columns.levels[0]
+        for t in types:
+            sub_heat = comp[t]
+            fig_h, ax_h = plt.subplots()
+            im = ax_h.imshow(sub_heat, aspect="auto")
+            ax_h.set_title(t)
+            ax_h.set_yticks(range(len(sub_heat.index)))
+            ax_h.set_yticklabels(sub_heat.index)
+            ax_h.set_xticks(range(0,24))
+            ax_h.set_xticklabels(range(0,24))
+            ax_h.set_xlabel("Hora")
+            ax_h.set_ylabel("Día")
+            fig_h.colorbar(im, ax=ax_h, label="Bicis disp.")
+            st.pyplot(fig_h)
+
 # ─── 7. RANKING ───────────────────────────────────────────────
 elif st.session_state.page == "Ranking":
     st.header("🏆 Ranking de Estaciones")
