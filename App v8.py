@@ -353,15 +353,14 @@ elif st.session_state.page == "Team":
     st.header("👥 Meet the Team")
     team = [
     {"name": "Agustín Jaime", "img": "vicky.jpg"},
-    {"name": "Javier Verba", "img": "vicky.png"},
-    {"name": "Mariana Henriques", "img": "vicky.png"},
-    {"name": "Victoria Losada", "img": "vicky.png"}
+    {"name": "Javier Verba", "img": "vicky.jpg"},
+    {"name": "Mariana Henriques", "img": "vicky.jpg"},
+    {"name": "Victoria Losada", "img": "vicky.jpg"}
     ]
     
     for member in team:
         # —––– Bloque indentado 4 espacios dentro del for –––—
         name = member.get("name", "Sin nombre")
-        role = member.get("role", "—")
         img_file = member.get("img")
     
         # Construyo la ruta
@@ -374,5 +373,5 @@ elif st.session_state.page == "Team":
             st.info(f"Imagen no encontrada: {img_file}")
     
         # Muestro nombre y rol
-        st.markdown(f"**{name}** — {role}")
+        st.markdown(f"**{name}**")
         # —––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––—
