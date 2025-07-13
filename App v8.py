@@ -432,18 +432,18 @@ elif st.session_state.page == "Stats":
     st.markdown("---")
 
     # ─── 10) Comparación por estación climática ─────────────────────
-    st.subheader("🌦️ Disponibilidad media por hora y estación climática")
+    st.subheader("🌦️ Average availability by hour & seasons")
     
     # 1) Definir función que mapea mes → estación climática
     def month_to_season(month):
         if month in (12, 1, 2):
-            return "Invierno"
+            return "Winter"
         elif month in (3, 4, 5):
-            return "Primavera"
+            return "Spring"
         elif month in (6, 7, 8):
-            return "Verano"
+            return "Summer"
         else:
-            return "Otoño"
+            return "Autumn"
     
     # 2) Trabajamos sobre tu subset 'sub' que ya está filtrado por estación, fechas y horas
     data_season = sub.copy()
@@ -463,7 +463,7 @@ elif st.session_state.page == "Stats":
     )
     
     # 5) Dibujamos 4 gráficos (2×2) para Invierno, Primavera, Verano y Otoño
-    seasons = ["Invierno","Primavera","Verano","Otoño"]
+    seasons = ["Winter","Spring","Summer","Autumn"]
     cols = st.columns(2)
     
     for i, season in enumerate(seasons):
