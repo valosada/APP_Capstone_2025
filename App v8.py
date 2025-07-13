@@ -391,7 +391,7 @@ elif st.session_state.page == "Stats":
     with col3:
         num_empty = (sub["available_bikes"] == 0).sum()
         num_full  = (sub["available_bikes"] >= sub["available_bikes"].max()).sum()
-        st.metric("⚠️ Empty/Available", f"{num_empty}/{num_full}")
+        #st.metric("⚠️ Empty/Available", f"{num_empty}/{num_full}")
 
     st.markdown("---")
 
