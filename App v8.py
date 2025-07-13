@@ -478,7 +478,7 @@ elif st.session_state.page == "Ranking":
         columns={"station_id":"ID","name":"Station","mean_variation":"Median"}))
     
     # Mostramos la tabla con Rank 1–10
-    st.table(top10[["Rank","ID","Estación","Varia. media"]])
+    st.table(top10[["Rank","ID","Station","average variation"]])
   
     st.markdown("---")
 
