@@ -46,7 +46,7 @@ c1, c2, c3, c4, c5 = st.columns(5)
 with c1:
     if st.button("🏠 Home"): navigate("Home")
 with c2:
-    if st.button("🗺️ Map"): navigate("Map")
+    if st.button("🗺️ Maps"): navigate("Map")
 with c3:
     if st.button("📊 Stats"): navigate("Stats")
 with c4:
@@ -99,7 +99,7 @@ if st.session_state.page == "Home":
         st.error("Logo not found at assets/UB logo.png")
 
 # ─── 5. MAP ───────────────────────────────────────────────────
-elif st.session_state.page == "Map":
+elif st.session_state.page == "Maps":
     st.header("🗺️ Bicing Stations - Current & Proposals")
 
     @st.cache_data
@@ -171,8 +171,6 @@ elif st.session_state.page == "Map":
         
         # Mostrás el mapa
         st_folium(m, width=800, height=600)
-
-    st.markdown("---")
 
     # 4.2 Animated Map: Availability Over Time
     st.subheader("⏱️ Bikes availability over time")
