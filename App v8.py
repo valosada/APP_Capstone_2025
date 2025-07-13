@@ -6,10 +6,12 @@ import base64
 import streamlit as st
 import pandas as pd
 import folium
+import numpy as np
 import matplotlib.pyplot as plt
 from folium.plugins import MarkerCluster, TimestampedGeoJson
 from folium import CustomIcon
 from streamlit_folium import st_folium
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 
 # ─── GLOBAL CSS ──────────────────────────────────────────────
 st.markdown("""
