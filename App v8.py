@@ -128,7 +128,7 @@ elif st.session_state.page == "Map":
             "Station Type",
             options=types,
             default=types,
-            format_func=lambda t: "🟢 Current" if t == "new" else "🔴 Proposal"
+            format_func=lambda t: "🟢 Proposal" if t == "new" else "🔴 Current"
         )
         filtered = markers_df[markers_df["type"].isin(selected)]
         if filtered.empty:
