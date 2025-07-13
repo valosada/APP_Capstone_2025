@@ -100,7 +100,7 @@ if st.session_state.page == "Home":
 
 # ─── 5. MAP ───────────────────────────────────────────────────
 elif st.session_state.page == "Map":
-    st.header("🗺️ Interactive Map of Bicing Stations")
+    st.header("🗺️ Bicing Stations - Current & Proposals")
 
     @st.cache_data
     def load_markers(path="data/markers_combinado.csv") -> pd.DataFrame:
@@ -128,7 +128,7 @@ elif st.session_state.page == "Map":
             "Station Type",
             options=types,
             default=types,
-            format_func=lambda t: "🟢 New" if t == "new" else "🔴 Old"
+            format_func=lambda t: "🟢 Current" if t == "new" else "🔴 Proposal"
         )
         filtered = markers_df[markers_df["type"].isin(selected)]
         if filtered.empty:
