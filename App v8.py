@@ -352,26 +352,23 @@ elif st.session_state.page == "Stats":
 elif st.session_state.page == "Team":
     st.header("👥 Meet the Team")
     team = [
-    {"name": "Agustín Jaime", "img": "vicky.jpg"},
-    {"name": "Javier Verba", "img": "vicky.jpg"},
-    {"name": "Mariana Henriques", "img": "vicky.jpg"},
-    {"name": "Victoria Losada", "img": "vicky.jpg"}
+        {"name": "Agustín Jaime",       "img": "vicky.jpg"},
+        {"name": "Javier Verba",        "img": "vicky.jpg"},
+        {"name": "Mariana Henriques",   "img": "vicky.jpg"},
+        {"name": "Victoria Losada",     "img": "vicky.jpg"},
     ]
-    
-    for member in team:
-        # —––– Bloque indentado 4 espacios dentro del for –––—
-        name = member.get("name", "Sin nombre")
-        img_file = member.get("img")
-    
-        # Construyo la ruta
-        img_path = os.path.join("assets", img_file) if img_file else None
-    
-        # Muestro imagen si existe
-        if img_path and os.path.exists(img_path):
-            st.image(img_path, width=150)
-        else:
-            st.info(f"Imagen no encontrada: {img_file}")
-    
-        # Muestro nombre y rol
-        st.markdown(f"**{name}**")
-        # —––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––—
+
+    # Creamos una columna por cada miembro
+    cols = st.columns(len(team), gap="large")
+    for col, member in zip(cols, team):
+        with col:
+            name = member.get("name", "Sin nombre")
+            img_file = member.get("img")
+            img_path = os.path.join("assets", img_file) if img_file else None
+
+            if img_path and os.path.exists(img_path):
+                st.image(img_path, width=150)
+            else:
+                st.warning(f"Imagen no encontrada: {img_file}")
+
+            st.markdown(f"**{name}**")
