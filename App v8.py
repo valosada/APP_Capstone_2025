@@ -575,31 +575,31 @@ elif st.session_state.page == "Ranking":
     )
     
     # 5) Top 10 barrios por rotación
-    st.markdown("**🏎️ Top-10 barrios por rotación (variación media)**")
+    st.markdown("**🏎️ Neighborhoods by turnover (average variation)**")
     rot_tbl = (
         rot_cs
         .head(10)
         .reset_index()
         .rename(columns={
-            "neighborhood": "Barrio",
-            "mean_variation": "Variación media"
+            "neighborhood": "Neighborhood",
+            "mean_variation": "Average"
         })
     )
     rot_tbl["Variación media"] = rot_tbl["Variación media"].astype(int)
     st.table(rot_tbl)
     
     # 6) Top 10 barrios por saturación
-    st.markdown("**📦 Top-10 barrios por saturación (bicis disponibles media)**")
+    st.markdown("**📦 Neighborhoods by saturation (average number of bikes available)**")
     sat_tbl = (
         sat_cs
         .tail(10)
         .reset_index()
         .rename(columns={
-            "neighborhood": "Barrio",
-            "available_bikes": "Bicis disp. media"
+            "neighborhood": "Neighborhood",
+            "available_bikes": "Average bikes availability"
         })
     )
-    sat_tbl["Bicis disp. media"] = sat_tbl["Bicis disp. media"].astype(int)
+    sat_tbl["Average bikes availability"] = sat_tbl["Average bikes availability"].astype(int)
     st.table(sat_tbl)
     
     st.markdown("---")
