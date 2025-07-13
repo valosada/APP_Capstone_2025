@@ -434,7 +434,7 @@ elif st.session_state.page == "Stats":
     # ─── 10) Comparación por estación climática ─────────────────────
     st.subheader("🌦️ Disponibilidad media por hora y estación climática")
     
-    # 1) Definir función que mapea mes → temporada
+    # 1) Definir función que mapea mes → estación climática
     def month_to_season(month):
         if month in (12, 1, 2):
             return "Invierno"
@@ -445,40 +445,42 @@ elif st.session_state.page == "Stats":
         else:
             return "Otoño"
     
-    # 2) Crear columna 'season'
-    df["season"] = df["time"].dt.month.apply(month_to_season)
-    
-    # 3) Filtrar sólo our sub, con tus filtros de estación, fechas y horas aplicados:
-    #    si quieres todas las estaciones usas df, o usa 'sub' si estás en Stats
+    # 2) Trabajamos sobre tu subset 'sub' que ya está filtrado por estación, fechas y horas
     data_season = sub.copy()
     
-    # 4) Cálculo de disponibilidad media por hora y temporada
+    # 3) Creamos la columna 'season'
+    data_season["season"] = data_season["time"].dt.month.apply(month_to_season)
+    
+    # 4) Calculamos disponibilidad media por (season, hour)
     hourly_season = (
         data_season
-        .groupby([data_season["season"], data_season["time"].dt.hour])["available_bikes"]
-        .mean()
-        .reset_index(name="avg_bikes")
+          .groupby([
+              "season",
+              data_season["time"].dt.hour.rename("hour")
+          ])["available_bikes"]
+          .mean()
+          .reset_index(name="avg_bikes")
     )
     
-    # 5) Graficar en 2×2
+    # 5) Dibujamos 4 gráficos (2×2) para Invierno, Primavera, Verano y Otoño
     seasons = ["Invierno","Primavera","Verano","Otoño"]
     cols = st.columns(2)
+    
     for i, season in enumerate(seasons):
         df_s = hourly_season[hourly_season["season"] == season]
-        if df_s.empty:
-            with cols[i%2]:
+        with cols[i % 2]:
+            if df_s.empty:
                 st.warning(f"No hay datos para {season}")
-            continue
+                continue
     
-        with cols[i%2]:
             st.markdown(f"**{season}**")
             fig, ax = plt.subplots()
-            ax.plot(df_s["time"].dt.hour, df_s["avg_bikes"], marker="o")
-            ax.set_title(season)
+            ax.plot(df_s["hour"], df_s["avg_bikes"], marker="o")
             ax.set_xlabel("Hora del día")
             ax.set_ylabel("Bicis disponibles (media)")
             ax.set_xticks(range(0,24,2))
-            ax.grid(True, alpha=0.3)
+            ax.set_title(season)
+            ax.grid(alpha=0.3)
             st.pyplot(fig)
 
 # ─── 7. RANKING ───────────────────────────────────────────────
