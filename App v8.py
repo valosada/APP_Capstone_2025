@@ -431,65 +431,54 @@ elif st.session_state.page == "Stats":
 
     st.markdown("---")
 
-    # ─── 9) Comportamiento específico por estación ────────────────
-    st.subheader("🔍 Comportamiento por estación")
+    # ─── 10) Comparación por estación climática ─────────────────────
+    st.subheader("🌦️ Disponibilidad media por hora y estación climática")
     
-    # 1) Prepara lista de estaciones (con ID si lo deseas)
-    unique_stations = (
-        df[["station_id","name"]]
-        .drop_duplicates()
-        .sort_values("station_id")
+    # 1) Definir función que mapea mes → temporada
+    def month_to_season(month):
+        if month in (12, 1, 2):
+            return "Invierno"
+        elif month in (3, 4, 5):
+            return "Primavera"
+        elif month in (6, 7, 8):
+            return "Verano"
+        else:
+            return "Otoño"
+    
+    # 2) Crear columna 'season'
+    df["season"] = df["time"].dt.month.apply(month_to_season)
+    
+    # 3) Filtrar sólo our sub, con tus filtros de estación, fechas y horas aplicados:
+    #    si quieres todas las estaciones usas df, o usa 'sub' si estás en Stats
+    data_season = sub.copy()
+    
+    # 4) Cálculo de disponibilidad media por hora y temporada
+    hourly_season = (
+        data_season
+        .groupby([data_season["season"], data_season["time"].dt.hour])["available_bikes"]
+        .mean()
+        .reset_index(name="avg_bikes")
     )
-    station_options = [
-        f"{row.station_id} - {row.name}"
-        for row in unique_stations.itertuples()
-    ]
     
-    # 2) Selector (hasta 4)
-    sel_four = st.multiselect(
-        "Selecciona hasta 4 estaciones:",
-        options=station_options,
-        default=station_options[:4]
-    )
-    if not sel_four:
-        st.info("Selecciona al menos una estación.")
-        st.stop()
-    if len(sel_four) > 4:
-        st.warning("Solo puedes comparar hasta 4 estaciones.")
-        sel_four = sel_four[:4]
-    
-    # 3) Convertir etiquetas en IDs numéricos
-    selected_ids = [int(s.split(" - ",1)[0]) for s in sel_four]
-    
-    # 4) Prepara cuadrícula 2×2
+    # 5) Graficar en 2×2
+    seasons = ["Invierno","Primavera","Verano","Otoño"]
     cols = st.columns(2)
-    for i, station_id in enumerate(selected_ids):
-        # Filtrar datos para esta estación y rango de fechas/horas ya aplicado
-        df_sta = sub[sub["station_id"] == station_id]
-    
-        # Si no hay datos, avisar
-        if df_sta.empty:
+    for i, season in enumerate(seasons):
+        df_s = hourly_season[hourly_season["season"] == season]
+        if df_s.empty:
             with cols[i%2]:
-                st.warning(f"No hay datos para la estación {sel_four[i]}.")
+                st.warning(f"No hay datos para {season}")
             continue
     
-        # Agrupar por fecha y hora (o simplemente por time si prefieres serie completa)
-        # Aquí sacamos media diaria
-        serie = (
-            df_sta
-            .groupby("time")["available_bikes"]
-            .mean()
-            .reset_index()
-        )
-    
-        # 5) Dibujar gráfico
         with cols[i%2]:
-            st.markdown(f"**{sel_four[i]}**")
+            st.markdown(f"**{season}**")
             fig, ax = plt.subplots()
-            ax.plot(serie["time"], serie["available_bikes"], marker=".", linewidth=1)
-            ax.set_xlabel("Fecha y hora")
-            ax.set_ylabel("Bicis disponibles")
-            ax.tick_params(axis="x", rotation=45)
+            ax.plot(df_s["time"].dt.hour, df_s["avg_bikes"], marker="o")
+            ax.set_title(season)
+            ax.set_xlabel("Hora del día")
+            ax.set_ylabel("Bicis disponibles (media)")
+            ax.set_xticks(range(0,24,2))
+            ax.grid(True, alpha=0.3)
             st.pyplot(fig)
 
 # ─── 7. RANKING ───────────────────────────────────────────────
