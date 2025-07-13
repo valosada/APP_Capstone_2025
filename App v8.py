@@ -650,7 +650,7 @@ elif st.session_state.page == "Ranking":
             )
 
     # ─── 8) Comparación por barrio ─────────────────────────────
-    st.subheader("🏙️ Top-10 neighborhoods")
+    st.subheader("3️⃣ Top-10 neighborhoods")
     
     # 1) Filtramos filas válidas
     df_cs = df.dropna(subset=["cross_street", "available_bikes", "time", "station_id"]).copy()
