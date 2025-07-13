@@ -297,7 +297,7 @@ elif st.session_state.page == "Map":
                         <div style='font-family: sans-serif; font-size: 13px;'>
                             <b>{name}</b><br>
                             <span style='color: #555;'>{barrio}</span><br>
-                            Availables: <b>{available}</b>
+                            Available: <b>{available}</b>
                         </div>
                     """
                     folium.CircleMarker(
@@ -310,7 +310,7 @@ elif st.session_state.page == "Map":
                         popup=folium.Popup(popup_html, max_width=250)
                     ).add_to(m)
 
-            st.subheader(f"Disponibilidad el {selected_date} a las {selected_hour}:00")
+            st.subheader(f"Available on {selected_date} at {selected_hour}:00")
             st_folium(m, width=800, height=500)
         
 # ─── 6. STATS ───────────────────────────────────────────────
