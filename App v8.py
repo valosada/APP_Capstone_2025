@@ -95,7 +95,7 @@ if st.session_state.page == "Home":
         st.error("Logo not found at assets/UB logo.png")
 
 # ─── 5. MAP ───────────────────────────────────────────────────
-elif st.session_state.page == "Spatial analysis":
+elif st.session_state.page == "Map":
     st.header("🗺️ Interactive Map of Bicing Stations")
 
     @st.cache_data
