@@ -579,7 +579,7 @@ elif st.session_state.page == "Ranking":
         .rename(columns={
             "station_id":"ID",
             "name":"Station",
-            "mean_variation":"Median"
+            "mean_variation":"Average"
         })
     )
 
