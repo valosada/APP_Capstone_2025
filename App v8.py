@@ -482,7 +482,6 @@ elif st.session_state.page == "Ranking":
     # 2a) Vacías crónicamente: >50% registros con 0 bicis
     vacias = (
         df
-        .tail(10)
         .assign(is_empty=lambda d: d["available_bikes"]==0)
         .groupby("station_id")["is_empty"]
         .mean()
@@ -490,6 +489,8 @@ elif st.session_state.page == "Ranking":
         .query("empty_ratio > 0.1")
         .merge(names, on="station_id")
         .sort_values("empty_ratio", ascending=False)
+        .head(10)
+        .reset_index(drop=True)          # índice 0–9
     )
     vacias["empty_ratio"] = (vacias["empty_ratio"]*100).round(1).astype(str) + "%"
     
