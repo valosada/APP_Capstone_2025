@@ -592,7 +592,7 @@ elif st.session_state.page == "Ranking":
     st.markdown("**📦 Neighborhoods by saturation (average number of bikes available)**")
     sat_tbl = (
         sat_cs
-        .tail(10)
+        .head(10)
         .reset_index()
         .rename(columns={
             "neighborhood": "Neighborhood",
