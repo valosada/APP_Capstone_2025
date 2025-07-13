@@ -355,7 +355,7 @@ elif st.session_state.page == "Team":
     {"name": "Agustín Jaime", "img": "vicky.jpg"},
     {"name": "Javier Verba", "img": "vicky.png"},
     {"name": "Mariana Henriques", "img": "vicky.png"},
-    {"name": "Victoria Losada"", "img": "vicky.png"}
+    {"name": "Victoria Losada", "img": "vicky.png"}
     ]
     
     for member in team:
