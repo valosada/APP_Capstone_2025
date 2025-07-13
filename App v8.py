@@ -317,12 +317,20 @@ elif st.session_state.page == "Stats":
     # 1) Cargar el dataset local
     @st.cache_data
     def load_data():
-        path = "data/bicing_interactive_dataset.csv"
-        if not os.path.exists(path):
-            st.error(f"❌ No encuentro el fichero {path}. Asegúrate de que existe en tu repo bajo data/")
-            st.stop()
-        df = pd.read_csv(path, parse_dates=["time"], encoding="utf-8-sig")
-        # renombra columnas si fuera necesario (p.ej. lat/lon)
+        # 1) URL de tu Release
+        url = (
+            "https://github.com/valosada/APP_Capstone_2025"
+            "/releases/download/v1.0/bicing_interactive_dataset.csv"
+        )
+        # 2) Descarga y revisión de estado
+        resp = requests.get(url)
+        resp.raise_for_status()  # detiene si da 404/403
+    
+        # 3) Decodifica y pásalo a pandas desde un StringIO
+        text = resp.content.decode("utf-8-sig")
+        df = pd.read_csv(io.StringIO(text), parse_dates=["time"])
+        
+        # 4) Limpieza mínima
         df = df.dropna(subset=["latitude", "longitude", "time", "available_bikes"])
         return df
 
