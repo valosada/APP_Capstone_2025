@@ -315,7 +315,7 @@ elif st.session_state.page == "Map":
         
 # ─── 6. STATS ───────────────────────────────────────────────
 elif st.session_state.page == "Stats":
-    st.header("📊 Dashboard Combinado de Uso de Bicing")
+    st.header("📊 Bicing usage patterns")
 
     # 1) Carga remota del CSV
     @st.cache_data
@@ -338,14 +338,14 @@ elif st.session_state.page == "Stats":
         .drop_duplicates()
         .sort_values(["station_id"])
     )
-    station_options = ["Todas las estaciones"] + [
+    station_options = ["All stations"] + [
         f"{row.station_id} - {row.name}"
         for row in unique_stations.itertuples()
     ]
-    sel_label = st.selectbox("Estación", station_options)
+    sel_label = st.selectbox("Station", station_options)
 
     # Extraemos station_id si no es "Todas"
-    if sel_label == "Todas las estaciones":
+    if sel_label == "All stations":
         sel_station_id = None
     else:
         sel_station_id = int(sel_label.split(" - ", 1)[0])
@@ -353,7 +353,7 @@ elif st.session_state.page == "Stats":
     # Selector de rango de fechas en línea
     dates = sorted(df["time"].dt.date.unique())
     sel_dates = st.select_slider(
-        "Rango de fechas",
+        "Select timeframe",
         options=dates,
         value=(dates[0], dates[-1]),
         format_func=lambda d: d.strftime("%Y-%m-%d")
@@ -361,10 +361,10 @@ elif st.session_state.page == "Stats":
 
     # Selector de rango de horas en línea
     sel_hours = st.slider(
-        "Rango de horas",
+        "Select time",
         min_value=0, max_value=23,
         value=(0,23),
-        help="Selecciona el intervalo de horas a analizar"
+        help="Select time"
     )
 
     st.markdown("---")
@@ -377,38 +377,38 @@ elif st.session_state.page == "Stats":
     )
     sub = df[mask]
     if sub.empty:
-        st.warning("No hay datos para los filtros seleccionados.")
+        st.warning("No data.")
         st.stop()
 
     # 4) KPIs generales
     col1, col2, col3 = st.columns(3)
     dias = (sel_dates[1] - sel_dates[0]).days + 1
     with col1:
-        st.metric("📅 Días seleccionados", f"{dias}")
+        st.metric("📅 Days", f"{dias}")
     with col2:
         avg_disp = sub["available_bikes"].mean().round(1)
-        st.metric("🚲 Disponibilidad media", f"{avg_disp}")
+        st.metric("🚲 Average availability", f"{avg_disp}")
     with col3:
         num_empty = (sub["available_bikes"] == 0).sum()
         num_full  = (sub["available_bikes"] >= sub["available_bikes"].max()).sum()
-        st.metric("⚠️ Vacías/llenas", f"{num_empty}/{num_full}")
+        st.metric("⚠️ Empty/Available", f"{num_empty}/{num_full}")
 
     st.markdown("---")
 
     # 5) Gráfico de líneas: disponibilidad media por hora
-    st.subheader("📈 Disponibilidad Media por Hora")
+    st.subheader("📈 Average availability per hour")
     hourly = sub.groupby(sub["time"].dt.hour)["available_bikes"].mean()
     fig, ax = plt.subplots()
     ax.plot(hourly.index, hourly.values, marker="o")
-    ax.set_xlabel("Hora del día")
-    ax.set_ylabel("Bicicletas disponibles (media)")
+    ax.set_xlabel("Time")
+    ax.set_ylabel("Available bikes (average)")
     ax.set_xticks(range(0,24))
     st.pyplot(fig)
 
     st.markdown("---")
 
     # 6) Heatmap día de semana vs hora
-    st.subheader("🔥 Heatmap: Día de Semana vs Hora")
+    st.subheader("🔥 Heatmap: Days & Time")
     temp = sub.copy()
     temp["weekday"] = temp["time"].dt.day_name().str[:3]
     heat = (
