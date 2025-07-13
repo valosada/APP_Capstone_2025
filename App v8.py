@@ -435,7 +435,6 @@ elif st.session_state.page == "Stats":
 elif st.session_state.page == "Ranking":
     st.header("🏆 Stations")
 
-    # Reusar la función de carga del CSV
     @st.cache_data
     def load_data():
         url = (
@@ -448,10 +447,10 @@ elif st.session_state.page == "Ranking":
         return df.dropna(subset=["available_bikes"])
 
     df = load_data()
+    names = df[["station_id","name"]].drop_duplicates()
 
     # 1️⃣ Top-10 estaciones más usadas (variación media)
     st.subheader("1️⃣ Top-10 Movement")
-    # Calculamos variación media absoluta
     df_sorted = (
         df
         .sort_values(["station_id","time"])
@@ -459,27 +458,30 @@ elif st.session_state.page == "Ranking":
         .apply(lambda s: s.diff().abs().mean())
         .reset_index(name="mean_variation")
     )
-    # Unimos el nombre
-    names = df[["station_id","name"]].drop_duplicates()
     top10 = (
         df_sorted
         .merge(names, on="station_id")
         .sort_values("mean_variation", ascending=False)
         .head(10)
-        .reset_index(drop=True)          # índice 0–9
+        .reset_index(drop=True)
     )
-    
-    # Redondeamos la variación y renombramos
-    top10["mean_variation"] = top10["mean_variation"].round(1)
-    st.table(top10[["station_id","name","mean_variation"]].rename(
-        columns={"station_id":"ID","name":"Station","mean_variation":"Median"}))
-    
+    # Trunca hacia abajo eliminando decimales
+    top10["mean_variation"] = top10["mean_variation"].astype(int)
+    st.table(
+        top10[["station_id","name","mean_variation"]]
+        .rename(columns={
+            "station_id":"ID",
+            "name":"Station",
+            "mean_variation":"Median"
+        })
+    )
+
     st.markdown("---")
 
     # 2️⃣ Estaciones Problema
     st.subheader("2️⃣ Top-10 usage trends")
 
-    # 2a) Vacías crónicamente: >50% registros con 0 bicis
+    # Vacías crónicamente (>10%)
     vacias = (
         df
         .assign(is_empty=lambda d: d["available_bikes"]==0)
@@ -490,12 +492,12 @@ elif st.session_state.page == "Ranking":
         .merge(names, on="station_id")
         .sort_values("empty_ratio", ascending=False)
         .head(10)
-        .reset_index(drop=True)          # índice 0–9
+        .reset_index(drop=True)
     )
-    vacias["empty_ratio"] = (vacias["empty_ratio"]*100).round(1).astype(str) + "%"
-    
-    # 2b) Llenas crónicamente: >50% registros con valor al máximo observado
-    # Primero hallamos max por estación
+    # multiplica por 100 y trunca
+    vacias["empty_ratio"] = (vacias["empty_ratio"]*100).astype(int).astype(str) + "%"
+
+    # Llenas crónicamente (>10%)
     maximos = df.groupby("station_id")["available_bikes"].max().reset_index(name="max_bikes")
     llenas = (
         df
@@ -508,9 +510,9 @@ elif st.session_state.page == "Ranking":
         .merge(names, on="station_id")
         .sort_values("full_ratio", ascending=False)
         .head(10)
-        .reset_index(drop=True)          # índice 0–9
+        .reset_index(drop=True)
     )
-    llenas["full_ratio"] = (llenas["full_ratio"]*100).round(1).astype(str) + "%"
+    llenas["full_ratio"] = (llenas["full_ratio"]*100).astype(int).astype(str) + "%"
 
     cols = st.columns(2)
     with cols[0]:
@@ -518,23 +520,31 @@ elif st.session_state.page == "Ranking":
         if vacias.empty:
             st.write("No station remains empty more than 10% of the time.")
         else:
-            st.table(vacias[["station_id","name","empty_ratio"]].rename(
-                columns={"station_id":"ID","name":"Station","empty_ratio":"%Empty"}))
+            st.table(
+                vacias[["station_id","name","empty_ratio"]]
+                .rename(columns={
+                    "station_id":"ID",
+                    "name":"Station",
+                    "empty_ratio":"%Empty"
+                })
+            )
     with cols[1]:
         st.markdown("**📈 Full (>10 %)**")
         if llenas.empty:
             st.write("No station remains full more than 10% of the time.")
         else:
-            st.table(llenas[["station_id","name","full_ratio"]].rename(
-                columns={"station_id":"ID","name":"Station","full_ratio":"%Full"}))
+            st.table(
+                llenas[["station_id","name","full_ratio"]]
+                .rename(columns={
+                    "station_id":"ID",
+                    "name":"Station",
+                    "full_ratio":"%Full"
+                })
+            )
 
     # ─── 8) Comparación por barrio ─────────────────────────────
     st.subheader("🏙️ Top-10 neighborhoods")
-
-    # 1) Nos quedamos solo con filas que tengan barrio
     df_cs = df.dropna(subset=["cross_street", "available_bikes", "time", "station_id"])
-
-    # 2) Rotación media por estación, luego promedio por barrio
     rot = (
         df_cs
         .sort_values(["cross_street","station_id","time"])
@@ -543,26 +553,25 @@ elif st.session_state.page == "Ranking":
         .reset_index(name="mean_variation")
     )
     rot_cs = rot.groupby("cross_street")["mean_variation"].mean().sort_values(ascending=False)
-
-    # 3) Saturación aproximada: bicis disponibles media por barrio
     sat_cs = df_cs.groupby("cross_street")["available_bikes"].mean().sort_values()
 
-    # 4) Mostrar primeras tablas de texto
-    st.markdown("**🏎️ Top neighborhoods by rotation (average variation)**")
-    st.table(
+    st.markdown("**🏎️ Top neighborhoods by rotation (avg)**")
+    rot_tbl = (
         rot_cs.head(10)
         .reset_index()
         .rename(columns={"cross_street":"Barrio","mean_variation":"Variación media"})
-        .assign(**{"Variación media": lambda d: d["Variación media"].round(1)})
     )
+    rot_tbl["Variación media"] = rot_tbl["Variación media"].astype(int)
+    st.table(rot_tbl)
 
-    st.markdown("**📦 Top neighborhoods by saturation (highest average number of available bikes)**")
-    st.table(
+    st.markdown("**📦 Top neighborhoods by saturation (avg bikes)**")
+    sat_tbl = (
         sat_cs.tail(10)
         .reset_index()
-        .rename(columns={"cross_street":"Neighborhood","available_bikes":"Average bikes availability"})
-        .assign(**{"Average bikes availability": lambda d: d["Average bikes availability"].round(1)})
+        .rename(columns={"cross_street":"Neighborhood","available_bikes":"Avg Bikes"})
     )
+    sat_tbl["Avg Bikes"] = sat_tbl["Avg Bikes"].astype(int)
+    st.table(sat_tbl)
 
     st.markdown("---")
 
