@@ -431,6 +431,64 @@ elif st.session_state.page == "Stats":
 
     st.markdown("---")
 
+    # ─── 8) Comparación por barrio ─────────────────────────────
+      st.subheader("🏙️ Comparación por barrio")
+  
+      # 1) Nos quedamos solo con filas que tengan barrio
+      df_cs = df.dropna(subset=["cross_street", "available_bikes", "time", "station_id"])
+  
+      # 2) Rotación media por estación, luego promedio por barrio
+      rot = (
+          df_cs
+          .sort_values(["cross_street","station_id","time"])
+          .groupby(["cross_street","station_id"])["available_bikes"]
+          .apply(lambda s: s.diff().abs().mean())
+          .reset_index(name="mean_variation")
+      )
+      rot_cs = rot.groupby("cross_street")["mean_variation"].mean().sort_values(ascending=False)
+  
+      # 3) Saturación aproximada: bicis disponibles media por barrio
+      sat_cs = df_cs.groupby("cross_street")["available_bikes"].mean().sort_values()
+  
+      # 4) Mostrar primeras tablas de texto
+      st.markdown("**🏎️ Top barrios por rotación (variación media)**")
+      st.table(
+          rot_cs.head(10)
+          .reset_index()
+          .rename(columns={"cross_street":"Barrio","mean_variation":"Variación media"})
+          .assign(**{"Variación media": lambda d: d["Variación media"].round(1)})
+      )
+  
+      st.markdown("**📦 Top barrios por saturación (bicis disponibles media más alta)**")
+      st.table(
+          sat_cs.tail(10)
+          .reset_index()
+          .rename(columns={"cross_street":"Barrio","available_bikes":"Bicis disp. media"})
+          .assign(**{"Bicis disp. media": lambda d: d["Bicis disp. media"].round(1)})
+      )
+  
+      st.markdown("---")
+  
+      # 5) Gráfica de barras: rotación por barrio (Top 10)
+      st.subheader("📊 Rotación media por barrio (Top 10)")
+      top_rot = rot_cs.head(10)
+      fig3, ax3 = plt.subplots()
+      ax3.bar(top_rot.index, top_rot.values)
+      ax3.set_xticklabels(top_rot.index, rotation=45, ha="right")
+      ax3.set_ylabel("Variación media bicis")
+      st.pyplot(fig3)
+  
+      st.markdown("---")
+  
+      # 6) Gráfica de barras: saturación media por barrio (Top 10)
+      st.subheader("📊 Saturación media por barrio (Top 10)")
+      top_sat = sat_cs.tail(10)
+      fig4, ax4 = plt.subplots()
+      ax4.bar(top_sat.index, top_sat.values)
+      ax4.set_xticklabels(top_sat.index, rotation=45, ha="right")
+      ax4.set_ylabel("Bicicletas disponibles (media)")
+      st.pyplot(fig4)
+
 # ─── 7. RANKING ───────────────────────────────────────────────
 elif st.session_state.page == "Ranking":
     st.header("🏆 Ranking de Estaciones")
