@@ -314,87 +314,77 @@ elif st.session_state.page == "Map":
 elif st.session_state.page == "Stats":
     st.header("📊 Usage Statistics")
 
-    # Cargar datos desde GitHub Release
+    # 1) Cargar el dataset local
     @st.cache_data
     def load_data():
-        url = (
-            "https://github.com/valosada/APP_Capstone_2025"
-            "/releases/download/v1.0/bicing_interactive_dataset.csv"
-        )
-        # 1) Descarga
-        resp = requests.get(url)
-        resp.raise_for_status()  # lanzará HTTPError si da 404/403
-    
-        # 2) Lee el contenido como texto y pásalo a pandas
-        text = resp.content.decode("utf-8-sig")
-        df = pd.read_csv(io.StringIO(text), parse_dates=["time"])
-    
-        # 3) Tu limpieza habitual
-        df = df.dropna(subset=["latitude", "longitude"])
+        path = "data/bicing_interactive_dataset.csv"
+        if not os.path.exists(path):
+            st.error(f"❌ No encuentro el fichero {path}. Asegúrate de que existe en tu repo bajo data/")
+            st.stop()
+        df = pd.read_csv(path, parse_dates=["time"], encoding="utf-8-sig")
+        # renombra columnas si fuera necesario (p.ej. lat/lon)
+        df = df.dropna(subset=["latitude", "longitude", "time", "available_bikes"])
         return df
 
     df = load_data()
-    
-    # Filtros en la barra lateral
+
+    # 2) Controles de filtrado
     st.sidebar.header("Filtros")
-    
-    stations = df["name"].dropna().unique()
-    selected_station = st.sidebar.selectbox("Estación", options=sorted(stations))
-    
-    selected_date = st.sidebar.date_input(
-        "Fecha", value=pd.to_datetime(df["time"]).dt.date.min(),
-        min_value=pd.to_datetime(df["time"]).dt.date.min(),
-        max_value=pd.to_datetime(df["time"]).dt.date.max()
-    )
-    
-    selected_hour = st.sidebar.slider("Hora", 0, 23, 12)
-    
-    # Filtrado del dataset
-    filtered = df[
+    estaciones = sorted(df["name"].dropna().unique())
+    selected_station = st.sidebar.selectbox("Estación", estaciones)
+
+    min_date = df["time"].dt.date.min()
+    max_date = df["time"].dt.date.max()
+    selected_date = st.sidebar.date_input("Fecha", value=min_date, min_value=min_date, max_value=max_date)
+
+    selected_hour = st.sidebar.slider("Hora del día", 0, 23, 12)
+
+    # 3) Filtrar los datos
+    mask = (
         (df["name"] == selected_station) &
         (df["time"].dt.date == selected_date) &
         (df["time"].dt.hour == selected_hour)
-    ]
-    
-    # Mensaje si no hay datos
-    if filtered.empty:
+    )
+    sub = df[mask]
+    if sub.empty:
         st.warning("No hay datos para los filtros seleccionados.")
         st.stop()
-    
-    # Mostrar KPIs
-    st.subheader(f"📍 Estación: {selected_station} - {selected_date} {selected_hour}:00")
-    available = int(filtered["available_bikes"].mean())
-    st.metric("Bicicletas disponibles (promedio)", value=f"{available}")
-    
-    # Mapa
-    st.subheader("🗺️ Ubicación de la estación")
-    m = folium.Map(location=[filtered.iloc[0]["latitude"], filtered.iloc[0]["longitude"]], zoom_start=15)
-    cluster = MarkerCluster().add_to(m)
-    
-    for r in filtered.itertuples():
-        popup_html = f"""
-            <div style='font-family: sans-serif; font-size: 13px;'>
-                <b>{r.name}</b><br>
-                <span style='color: #555;'>{r.cross_street}</span><br>
-                Disponibles: <b>{int(r.available_bikes)}</b>
-            </div>
-        """
+
+    # 4) KPI de disponibilidad
+    avg_bikes = int(sub["available_bikes"].mean())
+    st.subheader(f"📍 {selected_station} — {selected_date} a las {selected_hour}:00")
+    st.metric("Bicicletas disponibles (promedio)", f"{avg_bikes}")
+
+    # 5) Mapa centrado en la estación
+    lat0, lon0 = sub.iloc[0][["latitude", "longitude"]]
+    mapa = folium.Map(location=[lat0, lon0], zoom_start=15)
+    cluster = MarkerCluster().add_to(mapa)
+
+    def color(n):
+        return "#2ECC71" if n>10 else ("#F39C12" if n>2 else "#E74C3C")
+
+    for r in sub.itertuples():
+        popup = (
+            f"<b>{r.name}</b><br>"
+            f"{r.cross_street if hasattr(r, 'cross_street') else ''}<br>"
+            f"Disponibles: <b>{int(r.available_bikes)}</b>"
+        )
         folium.CircleMarker(
             location=[r.latitude, r.longitude],
             radius=8,
-            color="#2ECC71" if r.available_bikes > 10 else ("#F39C12" if r.available_bikes > 2 else "#E74C3C"),
+            color=color(r.available_bikes),
             fill=True,
-            fill_color="#2ECC71" if r.available_bikes > 10 else ("#F39C12" if r.available_bikes > 2 else "#E74C3C"),
-            fill_opacity=0.8,
-            popup=folium.Popup(popup_html, max_width=250)
+            fill_color=color(r.available_bikes),
+            fill_opacity=0.7,
+            popup=folium.Popup(popup, max_width=200)
         ).add_to(cluster)
-    
-    st_folium(m, width=900, height=500)
-    
-    # Tabla de datos (opcional)
-    st.subheader("📄 Datos filtrados")
-    st.dataframe(filtered.sort_values(by="time"))
 
+    st.subheader("🗺️ Ubicación y disponibilidad")
+    st_folium(mapa, width=800, height=450)
+
+    # 6) Tabla de valores
+    st.subheader("📄 Datos filtrados")
+    st.dataframe(sub.sort_values("time").drop(columns=["latitude","longitude"]))
   
 # ─── 7. TEAM ────────────────────────────────────────────────
 elif st.session_state.page == "Team":
