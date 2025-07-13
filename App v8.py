@@ -54,7 +54,7 @@ with c3:
 with c4:
     if st.button("📊 Stats"): navigate("Stats")
 with c5:
-    if st.button("📊 Ranking"): navigate("Ranking")
+    if st.button("🏆 Ranking"): navigate("Ranking")
 with c6:
     if st.button("👥 Team"): navigate("Team")
 st.markdown("---")
