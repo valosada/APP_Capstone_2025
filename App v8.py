@@ -345,10 +345,10 @@ elif st.session_state.page == "Stats":
     sel_label = st.selectbox("Station", station_options)
 
     # Extraemos station_id si no es "Todas"
-    #if sel_label == "All stations":
-    #    sel_station_id = None
-    #else:
-    #    sel_station_id = int(sel_label.split(" - ", 1)[0])
+    if sel_label == "All stations":
+        sel_station_id = None
+    else:
+        sel_station_id = int(sel_label.split(" - ", 1)[0])
 
     # Selector de rango de fechas en línea
     dates = sorted(df["time"].dt.date.unique())
