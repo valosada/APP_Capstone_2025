@@ -358,7 +358,10 @@ elif st.session_state.page == "Team":
         {"name":"Victoria Losada","img":"assets/vicky.jpg"},
     ]
     cols = st.columns(4, gap="small")
-    for col, member in zip(cols, team):
-        with col:
-            st.image(member["img"], width=150)
-            st.markdown(f"**{member['name']}**")
+    for member in team:
+        img_path = os.path.join("assets", member["img"])
+        if os.path.exists(img_path):
+            st.image(img_path, width=150)
+        else:
+            st.warning(f"⚠️ No se encontró la imagen '{member['img']}'")
+        st.write(f"**{member['name']}** — {member['role']}")
