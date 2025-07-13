@@ -69,7 +69,7 @@ if st.session_state.page == "Home":
     st.markdown("<h2 style='text-align:center; margin-top:40px;'>Overview</h2>", unsafe_allow_html=True)
     st.markdown(
         "<p style='text-align:center; color:#5f6368; margin-bottom:40px;'>"
-        "Understanding urban mobility through Barcelona's bike sharing network"
+        "Understanding urban mobility through Barcelona's bike sharing network."
         "</p>",
         unsafe_allow_html=True
     )
