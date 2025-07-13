@@ -425,8 +425,8 @@ elif st.session_state.page == "Stats":
     im = ax2.imshow(heat, aspect="auto")
     ax2.set_yticks(range(len(heat.index))); ax2.set_yticklabels(heat.index)
     ax2.set_xticks(range(0,24)); ax2.set_xticklabels(range(0,24))
-    ax2.set_xlabel("Hora"); ax2.set_ylabel("Día de la semana")
-    fig2.colorbar(im, ax=ax2, label="Bicis disponibles (media)")
+    ax2.set_xlabel("Hora"); ax2.set_ylabel("Day of the week")
+    fig2.colorbar(im, ax=ax2, label="Available bikes (average)")
     st.pyplot(fig2)
 
     st.markdown("---")
