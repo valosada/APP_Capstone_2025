@@ -257,7 +257,7 @@ elif st.session_state.page == "Map":
             merged["date"] = merged["time"].dt.date
             dates = sorted(merged["date"].unique())
             selected_date = st.select_slider(
-                "Selecciona la fecha",
+                "Select date",
                 options=dates,
                 value=dates[0],
                 format_func=lambda d: d.strftime("%Y-%m-%d")
@@ -265,7 +265,7 @@ elif st.session_state.page == "Map":
         
             # 2) selector de hora
             hours = list(range(0,24))
-            selected_hour = st.slider("Selecciona la hora", 0, 23, 12)
+            selected_hour = st.slider("Select time", 0, 23, 12)
         
             # 3) filtramos
             subset = merged[
@@ -273,7 +273,7 @@ elif st.session_state.page == "Map":
                 (merged["time"].dt.hour == selected_hour)
             ]
             if subset.empty:
-                st.warning(f"No hay datos para {selected_date} a las {selected_hour}h")
+                st.warning(f"No data on {selected_date} at {selected_hour}h")
                 st.stop()
         
             # 4) construimos el mapa con circle markers coloreados
@@ -297,7 +297,7 @@ elif st.session_state.page == "Map":
                         <div style='font-family: sans-serif; font-size: 13px;'>
                             <b>{name}</b><br>
                             <span style='color: #555;'>{barrio}</span><br>
-                            Disponibles: <b>{available}</b>
+                            Availables: <b>{available}</b>
                         </div>
                     """
                     folium.CircleMarker(
