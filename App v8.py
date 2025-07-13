@@ -431,6 +431,96 @@ elif st.session_state.page == "Stats":
 
     st.markdown("---")
 
+# ─── 7. RANKING ───────────────────────────────────────────────
+elif st.session_state.page == "Ranking":
+    st.header("🏆 Ranking de Estaciones")
+
+    # Reusar la función de carga del CSV
+    @st.cache_data
+    def load_data():
+        url = (
+            "https://github.com/valosada/APP_Capstone_2025"
+            "/releases/download/v1.0/bicing_interactive_dataset.csv"
+        )
+        resp = requests.get(url); resp.raise_for_status()
+        text = resp.content.decode("utf-8-sig")
+        df = pd.read_csv(io.StringIO(text), parse_dates=["time"])
+        return df.dropna(subset=["available_bikes"])
+
+    df = load_data()
+
+    # 1️⃣ Top-10 estaciones más usadas (variación media)
+    st.subheader("1️⃣ Top-10 Estaciones más Movidas")
+    # Calculamos variación media absoluta
+    df_sorted = (
+        df
+        .sort_values(["station_id","time"])
+        .groupby("station_id")["available_bikes"]
+        .apply(lambda s: s.diff().abs().mean())
+        .reset_index(name="mean_variation")
+    )
+    # Unimos el nombre
+    names = df[["station_id","name"]].drop_duplicates()
+    top10 = (
+        df_sorted
+        .merge(names, on="station_id")
+        .sort_values("mean_variation", ascending=False)
+        .head(10)
+    )
+    top10["mean_variation"] = top10["mean_variation"].round(1)
+    st.table(top10[["station_id","name","mean_variation"]].rename(
+        columns={"station_id":"ID","name":"Estación","mean_variation":"Varia. media"}))
+
+    st.markdown("---")
+
+    # 2️⃣ Estaciones Problema
+    st.subheader("2️⃣ Estaciones Problema")
+
+    # 2a) Vacías crónicamente: >50% registros con 0 bicis
+    vacias = (
+        df
+        .assign(is_empty=lambda d: d["available_bikes"]==0)
+        .groupby("station_id")["is_empty"]
+        .mean()
+        .reset_index(name="empty_ratio")
+        .query("empty_ratio > 0.5")
+        .merge(names, on="station_id")
+        .sort_values("empty_ratio", ascending=False)
+    )
+    vacias["empty_ratio"] = (vacias["empty_ratio"]*100).round(1).astype(str) + "%"
+    
+    # 2b) Llenas crónicamente: >50% registros con valor al máximo observado
+    # Primero hallamos max por estación
+    maximos = df.groupby("station_id")["available_bikes"].max().reset_index(name="max_bikes")
+    llenas = (
+        df
+        .merge(maximos, on="station_id")
+        .assign(is_full=lambda d: d["available_bikes"]==d["max_bikes"])
+        .groupby("station_id")["is_full"]
+        .mean()
+        .reset_index(name="full_ratio")
+        .query("full_ratio > 0.5")
+        .merge(names, on="station_id")
+        .sort_values("full_ratio", ascending=False)
+    )
+    llenas["full_ratio"] = (llenas["full_ratio"]*100).round(1).astype(str) + "%"
+
+    cols = st.columns(2)
+    with cols[0]:
+        st.markdown("**📉 Vacías crónicamente (>50 %)**")
+        if vacias.empty:
+            st.write("Ninguna estación supera el 50 % de tiempo vacía.")
+        else:
+            st.table(vacias[["station_id","name","empty_ratio"]].rename(
+                columns={"station_id":"ID","name":"Estación","empty_ratio":"%Vacías"}))
+    with cols[1]:
+        st.markdown("**📈 Llenas crónicamente (>50 %)**")
+        if llenas.empty:
+            st.write("Ninguna estación supera el 50 % de tiempo llena.")
+        else:
+            st.table(llenas[["station_id","name","full_ratio"]].rename(
+                columns={"station_id":"ID","name":"Estación","full_ratio":"%Llenas"}))
+
 # ─── 7. TEAM ────────────────────────────────────────────────
 elif st.session_state.page == "Team":
     st.header("👥 Meet the Team")
