@@ -682,7 +682,7 @@ elif st.session_state.page == "Ranking":
     )
     
     # 5) Top 10 barrios por rotación
-    st.markdown("**🏎️ Neighborhoods by turnover (average variation)**")
+    st.markdown("**Neighborhoods by turnover (average variation)**")
     rot_tbl = (
         rot_cs
         .head(10)
@@ -696,7 +696,7 @@ elif st.session_state.page == "Ranking":
     st.table(rot_tbl)
     
     # 6) Top 10 barrios por saturación
-    st.markdown("**📦 Neighborhoods by saturation (average number of bikes available)**")
+    st.markdown("**Neighborhoods by saturation (average number of bikes available)**")
     sat_tbl = (
         sat_cs
         .head(10)
