@@ -46,7 +46,7 @@ c1, c2, c3, c4, c5 = st.columns(5)
 with c1:
     if st.button("🏠 Home"): navigate("Home")
 with c2:
-    if st.button("🗺️ Maps"): navigate("Map")
+    if st.button("🗺️ Maps"): navigate("Maps")
 with c3:
     if st.button("📊 Stats"): navigate("Stats")
 with c4:
