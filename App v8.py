@@ -352,24 +352,25 @@ elif st.session_state.page == "Stats":
 elif st.session_state.page == "Team":
     st.header("👥 Meet the Team")
     team = [
-        {"name":"Agustín Jaime","img":"assets/vicky.jpg"},
-        {"name":"Javier Verba","img":"assets/vicky.jpg"},
-        {"name":"Mariana Henriques","img":"assets/vicky.jpg"},
-        {"name":"Victoria Losada","img":"assets/vicky.jpg"},
+    {"name": "Vicky", "role": "Data Analyst", "img": "vicky.jpg"},
+    {"name": "Juan",              "img": "juan.png"},  # aquí no hay 'role'
     ]
-    cols = st.columns(4, gap="small")
-  
+    
     for member in team:
-    name = member.get("name", "Sin nombre")
-    role = member.get("role", "—")             # si no existe 'role', muestra guión
-    img_file = member.get("img")
-    img_path = os.path.join("assets", img_file) if img_file else None
-
-    # Mostrar imagen si existe
-    if img_path and os.path.exists(img_path):
-        st.image(img_path, width=150)
-    else:
-        st.info(f"Imagen no encontrada: {img_file}")
-
-    # Mostrar nombre y rol sin romperse
-    st.markdown(f"**{name}** — {role}")
+        # —––– Bloque indentado 4 espacios dentro del for –––—
+        name = member.get("name", "Sin nombre")
+        role = member.get("role", "—")
+        img_file = member.get("img")
+    
+        # Construyo la ruta
+        img_path = os.path.join("assets", img_file) if img_file else None
+    
+        # Muestro imagen si existe
+        if img_path and os.path.exists(img_path):
+            st.image(img_path, width=150)
+        else:
+            st.info(f"Imagen no encontrada: {img_file}")
+    
+        # Muestro nombre y rol
+        st.markdown(f"**{name}** — {role}")
+        # —––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––—
