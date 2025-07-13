@@ -175,20 +175,71 @@ elif st.session_state.page == "Spatial analysis":
 
     @st.cache_data
     def load_availability():
-        df = pd.read_csv("data/final_sorted.csv", encoding="utf-8-sig")
-        df.columns = df.columns.str.strip().str.replace('\ufeff','')
+        # 1) Descarga el CSV desde tu GitHub Release
+        url = "https://github.com/valosada/APP_Capstone_2025/releases/download/v1.0/final_sorted.csv"
+        resp = requests.get(url)
+        resp.raise_for_status()  # Lanzará excepción si 404/403
+    
+        # 2) Decodifica y pasa el contenido a pandas desde un StringIO
+        text = resp.content.decode("utf-8-sig")
+        df = pd.read_csv(io.StringIO(text))
+    
+        # 3) Tu limpieza habitual
+        df.columns = df.columns.str.strip().str.replace("\ufeff", "")
         df["time"] = pd.to_datetime(df[["year","month","day","hour"]], errors="coerce")
-        df["station_id"]      = df["station_id"].astype(str).str.lstrip("0")
-        df["station_id"]      = pd.to_numeric(df["station_id"], errors="coerce").astype("Int64")
-        df["available_bikes"] = pd.to_numeric(df["mean_available_docks"], errors="coerce").round().astype("Int64")
-        return df.dropna(subset=["station_id","time","available_bikes"])[["station_id","time","available_bikes"]]
+        df["station_id"] = (
+            df["station_id"]
+              .astype(str)
+              .str.lstrip("0")
+              .pipe(pd.to_numeric, errors="coerce")
+              .astype("Int64")
+        )
+        df["available_bikes"] = (
+            pd.to_numeric(df["mean_available_docks"], errors="coerce")
+              .round()
+              .astype("Int64")
+        )
+    
+        # 4) Devuelve sólo las columnas que necesitas
+        return df.dropna(subset=["station_id","time","available_bikes"])\
+                 [["station_id","time","available_bikes"]]
 
     @st.cache_data
     def load_stations_for_anim():
-        df = pd.read_csv("data/Informacio_Estacions_Bicing_2025.csv", encoding="latin1")
-        df.columns = df.columns.str.strip().str.replace('\ufeff','')
-        df["station_id"] = pd.to_numeric(df["station_id"], errors="coerce")
+        # 1) Descarga el CSV completo desde tu Release
+        url = (
+            "https://github.com/valosada/APP_Capstone_2025"
+            "/releases/download/v1.0/bicing_interactive_dataset.csv"
+        )
+        resp = requests.get(url)
+        resp.raise_for_status()  # Lanzará un error si la URL falla
+    
+        # 2) Decodifica y pásalo a pandas desde un StringIO
+        text = resp.content.decode("latin1")
+        df = pd.read_csv(io.StringIO(text), encoding="latin1")
+    
+        # 3) Limpieza de columnas
+        df.columns = df.columns.str.strip().str.replace("\ufeff", "")
+        df["station_id"] = (
+            df["station_id"].astype(str)
+              .str.lstrip("0")
+              .pipe(pd.to_numeric, errors="coerce")
+              .astype("Int64")
+        )
         df = df.rename(columns={"lat": "latitude", "lon": "longitude"})
+    
+        # 4) Asegura la columna cross_street
+        if "cross_street" not in df.columns and "cross street" in df.columns:
+            df["cross_street"] = df["cross street"]
+    
+        # 5) Devuelve solo las columnas de estación
+        return df[[
+            "station_id",
+            "name",
+            "cross_street",
+            "latitude",
+            "longitude"
+        ]]
     
         # ✅ revisar aquí que esté la columna correcta
         if "cross_street" not in df.columns:
