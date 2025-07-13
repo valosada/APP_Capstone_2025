@@ -469,17 +469,11 @@ elif st.session_state.page == "Ranking":
         .reset_index(drop=True)          # índice 0–9
     )
     
-  # Insertamos la columna de ranking
-    top10.insert(0, "Rank", top10.index + 1)
-    
     # Redondeamos la variación y renombramos
     top10["mean_variation"] = top10["mean_variation"].round(1)
     st.table(top10[["station_id","name","mean_variation"]].rename(
         columns={"station_id":"ID","name":"Station","mean_variation":"Median"}))
     
-    # Mostramos la tabla con Rank 1–10
-    st.table(top10[["ID","Station","Median"]])
-  
     st.markdown("---")
 
     # 2️⃣ Estaciones Problema
