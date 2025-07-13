@@ -207,33 +207,27 @@ elif st.session_state.page == "Map":
 
     @st.cache_data
     def load_stations_for_anim():
-        # 1) Descarga el CSV completo desde tu Release
-        url = (
-            "https://github.com/valosada/APP_Capstone_2025"
-            "/releases/download/v1.0/bicing_interactive_dataset.csv"
-        )
-        resp = requests.get(url)
-        resp.raise_for_status()  # Lanzará un error si la URL falla
+        # 1) Lee el CSV local
+        path = "data/Informacio_Estacions_Bicing_2025.csv"
+        if not os.path.exists(path):
+            st.stop(f"❌ No encuentro el fichero {path}. Asegúrate de haberlo subido al repo.")
+        df = pd.read_csv(path, encoding="latin1")
     
-        # 2) Decodifica y pásalo a pandas desde un StringIO
-        text = resp.content.decode("latin1")
-        df = pd.read_csv(io.StringIO(text), encoding="latin1")
-    
-        # 3) Limpieza de columnas
-        df.columns = df.columns.str.strip().str.replace("\ufeff", "")
+        # 2) Limpieza de columnas
+        df.columns = df.columns.str.strip().str.replace("\ufeff","")
         df["station_id"] = (
             df["station_id"].astype(str)
               .str.lstrip("0")
               .pipe(pd.to_numeric, errors="coerce")
               .astype("Int64")
         )
-        df = df.rename(columns={"lat": "latitude", "lon": "longitude"})
+        df = df.rename(columns={"lat":"latitude","lon":"longitude"})
     
-        # 4) Asegura la columna cross_street
+        # 3) Asegura la columna cross_street
         if "cross_street" not in df.columns and "cross street" in df.columns:
             df["cross_street"] = df["cross street"]
     
-        # 5) Devuelve solo las columnas de estación
+        # 4) Devuelve solo las columnas que necesitas
         return df[[
             "station_id",
             "name",
@@ -241,7 +235,7 @@ elif st.session_state.page == "Map":
             "latitude",
             "longitude"
         ]]
-    
+        
         # ✅ revisar aquí que esté la columna correcta
         if "cross_street" not in df.columns:
             st.warning("⚠️ La columna 'cross_street' no existe. Usando columna alternativa o renombrando si es necesario.")
