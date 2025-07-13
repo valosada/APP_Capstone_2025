@@ -507,6 +507,8 @@ elif st.session_state.page == "Ranking":
         .query("full_ratio > 0.1")
         .merge(names, on="station_id")
         .sort_values("full_ratio", ascending=False)
+        .head(10)
+        .reset_index(drop=True)          # índice 0–9
     )
     llenas["full_ratio"] = (llenas["full_ratio"]*100).round(1).astype(str) + "%"
 
