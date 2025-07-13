@@ -268,86 +268,86 @@ elif st.session_state.page == "Spatial analysis":
 elif st.session_state.page == "Stats":
     st.header("📊 Usage Statistics")
 
-    # Cargar datos desde uploader en lugar de disco
+    # 1) Función de carga que lee del disco o del uploader
     @st.cache_data
-    def load_data(uploaded_file):
-        df = pd.read_csv(uploaded_file, parse_dates=["time"], encoding="utf-8")
+    def load_data(path=None, upload=None):
+        if path and os.path.exists(path):
+            df = pd.read_csv(path, parse_dates=["time"], encoding="utf-8")
+        else:
+            df = pd.read_csv(upload, parse_dates=["time"], encoding="utf-8")
         df = df.dropna(subset=["latitude", "longitude"])
+        # extraemos componentes temporales
+        df["date"] = df["time"].dt.date
+        df["hour"] = df["time"].dt.hour
         return df
     
-    # Pide al usuario que suba el CSV
-    uploaded_file = st.file_uploader(
-        "🔃 Sube el dataset `bicing_interactive_dataset.csv`", 
-        type="csv"
-    )
-    if not uploaded_file:
-        st.warning("⚠️ Por favor sube el CSV para continuar.")
-        st.stop()
+    # 2) Intentamos carga local
+    LOCAL_PATH = "data/bicing_interactive_dataset.csv"
+    if os.path.exists(LOCAL_PATH):
+        df = load_data(path=LOCAL_PATH)
+    else:
+        uploaded_file = st.file_uploader(
+            "🔃 Sube el dataset `bicing_interactive_dataset.csv`", 
+            type="csv"
+        )
+        if not uploaded_file:
+            st.stop()
+        df = load_data(upload=uploaded_file)
     
-    # Una vez subido, carga los datos
-    df = load_data(uploaded_file)
-    
-    # Filtros en la barra lateral
+    # 3) Panel de filtros
     st.sidebar.header("Filtros")
+    stations = sorted(df["name"].dropna().unique())
+    selected_station = st.sidebar.selectbox("Estación", ["Todas"] + stations)
     
-    stations = df["name"].dropna().unique()
-    selected_station = st.sidebar.selectbox("Estación", options=sorted(stations))
+    dates = sorted(df["date"].unique())
+    selected_date = st.sidebar.selectbox("Fecha", dates)
     
-    selected_date = st.sidebar.date_input(
-        "Fecha", value=pd.to_datetime(df["time"]).dt.date.min(),
-        min_value=pd.to_datetime(df["time"]).dt.date.min(),
-        max_value=pd.to_datetime(df["time"]).dt.date.max()
-    )
+    selected_hour = st.sidebar.slider("Hora", min_value=0, max_value=23, value=12)
     
-    selected_hour = st.sidebar.slider("Hora", 0, 23, 12)
+    # 4) Aplicamos el filtro
+    mask = (df["date"] == selected_date) & (df["hour"] == selected_hour)
+    if selected_station != "Todas":
+        mask &= (df["name"] == selected_station)
+    subset = df[mask]
     
-    # Filtrado del dataset
-    filtered = df[
-        (df["name"] == selected_station) &
-        (df["time"].dt.date == selected_date) &
-        (df["time"].dt.hour == selected_hour)
-    ]
-    
-    # Mensaje si no hay datos
-    if filtered.empty:
-        st.warning("No hay datos para los filtros seleccionados.")
+    if subset.empty:
+        st.warning(f"No hay datos para {selected_date} a las {selected_hour}h.")
         st.stop()
     
-    # Mostrar KPIs
-    st.subheader(f"📍 Estación: {selected_station} - {selected_date} {selected_hour}:00")
-    available = int(filtered["available_bikes"].mean())
-    st.metric("Bicicletas disponibles (promedio)", value=f"{available}")
+    # 5) KPI: promedio disponibles
+    avg_avail = int(subset["available_bikes"].mean())
+    st.metric(label="🚲 Bicicletas disponibles (promedio)", value=avg_avail)
     
-    # Mapa
-    st.subheader("🗺️ Ubicación de la estación")
-    m = folium.Map(location=[filtered.iloc[0]["latitude"], filtered.iloc[0]["longitude"]], zoom_start=15)
+    # 6) Tabla interactiva
+    st.subheader("Datos detallados")
+    st.dataframe(
+        subset[["name","cross_street","available_bikes","latitude","longitude"]]
+        .sort_values("available_bikes", ascending=False)
+        .reset_index(drop=True)
+    )
+    
+    # 7) (Opcional) Mapa pequeño
+    import folium
+    from folium.plugins import MarkerCluster
+    from streamlit_folium import st_folium
+    
+    m = folium.Map(location=[41.3851,2.1734], zoom_start=13)
     cluster = MarkerCluster().add_to(m)
-    
-    for r in filtered.itertuples():
-        popup_html = f"""
-            <div style='font-family: sans-serif; font-size: 13px;'>
-                <b>{r.name}</b><br>
-                <span style='color: #555;'>{r.cross_street}</span><br>
-                Disponibles: <b>{int(r.available_bikes)}</b>
-            </div>
-        """
+    for r in subset.itertuples():
+        popup = f"<b>{r.name}</b><br>{r.cross_street}<br>Disponibles: <b>{int(r.available_bikes)}</b>"
         folium.CircleMarker(
             location=[r.latitude, r.longitude],
-            radius=8,
-            color="#2ECC71" if r.available_bikes > 10 else ("#F39C12" if r.available_bikes > 2 else "#E74C3C"),
+            radius=5,
+            color="#2ECC71" if r.available_bikes>10 else ("#F39C12" if r.available_bikes>2 else "#E74C3C"),
             fill=True,
-            fill_color="#2ECC71" if r.available_bikes > 10 else ("#F39C12" if r.available_bikes > 2 else "#E74C3C"),
-            fill_opacity=0.8,
-            popup=folium.Popup(popup_html, max_width=250)
+            fill_color="#2ECC71" if r.available_bikes>10 else ("#F39C12" if r.available_bikes>2 else "#E74C3C"),
+            fill_opacity=0.7,
+            popup=folium.Popup(popup, max_width=200)
         ).add_to(cluster)
     
-    st_folium(m, width=900, height=500)
-    
-    # Tabla de datos (opcional)
-    st.subheader("📄 Datos filtrados")
-    st.dataframe(filtered.sort_values(by="time"))
+    st.subheader(f"Mapa {selected_date} – {selected_hour}:00")
+    st_folium(m, width=700, height=400)
 
-  
 # ─── 7. TEAM ────────────────────────────────────────────────
 elif st.session_state.page == "Team":
     st.header("👥 Meet the Team")
