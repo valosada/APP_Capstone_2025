@@ -585,7 +585,7 @@ elif st.session_state.page == "Ranking":
             "mean_variation": "Average"
         })
     )
-    rot_tbl["Variación media"] = rot_tbl["Variación media"].astype(int)
+    rot_tbl["Average"] = rot_tbl["Average"].astype(int)
     st.table(rot_tbl)
     
     # 6) Top 10 barrios por saturación
