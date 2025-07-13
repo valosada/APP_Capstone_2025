@@ -119,26 +119,26 @@ elif st.session_state.page == "Prediction":
     st.table(submission.head(10))
 
     # 3) Estadísticas básicas
-    st.subheader("ℹ️ Estadísticas de la predicción")
+    st.subheader("ℹ️ Stats")
     st.write(submission.describe())
 
     # 4) Histograma de las predicciones
-    st.subheader("📈 Distribución de Predicciones")
+    st.subheader("📈 Distribution of predictions")
     fig, ax = plt.subplots()
     ax.hist(submission.iloc[:, 1], bins=30, edgecolor="k")  # asumiendo que la 2ª col es la pred
-    ax.set_xlabel("Predicción")
-    ax.set_ylabel("Frecuencia")
+    ax.set_xlabel("Prediction")
+    ax.set_ylabel("Frequency")
     st.pyplot(fig)
 
     # 5) (Opcional) Métricas si tienes un ground_truth.csv
-    gt_file = st.file_uploader("Sube ground_truth.csv para evaluar métricas", type="csv")
+    gt_file = st.file_uploader("Upload ground_truth.csv to evaluate metrics", type="csv")
     if gt_file:
         truth = pd.read_csv(gt_file)
         df_eval = submission.merge(truth, on="Id", how="inner")  # ajusta el nombre de la columna clave
         y_true = df_eval["True"]
         y_pred = df_eval["Predicted"]
 
-        st.subheader("🧮 Métricas de Evaluación")
+        st.subheader("🧮 Evaluation metrics")
         mse = mean_squared_error(y_true, y_pred)
         mae = mean_absolute_error(y_true, y_pred)
         r2  = r2_score(y_true, y_pred)
@@ -147,12 +147,12 @@ elif st.session_state.page == "Prediction":
         st.metric("R²",  f"{r2:.2f}")
 
         # Curva real vs predicha
-        st.subheader("🔍 Real vs. Predicho")
+        st.subheader("🔍 Real vs. Forecast")
         fig2, ax2 = plt.subplots()
         ax2.scatter(y_true, y_pred, alpha=0.6)
         ax2.plot([y_true.min(), y_true.max()],[y_true.min(), y_true.max()], 'r--')
-        ax2.set_xlabel("Valor verdadero")
-        ax2.set_ylabel("Valor predicho")
+        ax2.set_xlabel("Real value")
+        ax2.set_ylabel("Forecast value")
         st.pyplot(fig2)
 
 # ─── 5. MAP ───────────────────────────────────────────────────
