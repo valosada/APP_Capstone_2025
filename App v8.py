@@ -333,9 +333,18 @@ elif st.session_state.page == "Stats":
     st.sidebar.header("Filtros")
     estaciones = sorted(df["name"].dropna().unique())
     sel_station = st.sidebar.selectbox("Estación", estaciones)
+
+    # Filtro de fechas
     min_date = df["time"].dt.date.min()
     max_date = df["time"].dt.date.max()
-    sel_dates = st.sidebar.date_input("Rango de fechas", [min_date, max_date], min_value=min_date, max_value=max_date)
+    sel_dates = st.sidebar.date_input(
+        "Rango de fechas",
+        value=[min_date, max_date],
+        min_value=min_date,
+        max_value=max_date
+    )
+
+    # Filtro de horas
     sel_hour = st.sidebar.slider("Rango de horas", 0, 23, (0,23))
 
     # 3) Aplica filtros
@@ -352,7 +361,8 @@ elif st.session_state.page == "Stats":
     # 4) KPIs generales
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.metric("📅 Días seleccionados", f"{(sel_dates[1] - sel_dates[0]).days + 1}")
+        dias = (sel_dates[1] - sel_dates[0]).days + 1
+        st.metric("📅 Días seleccionados", f"{dias}")
     with col2:
         avg_disp = sub["available_bikes"].mean().round(1)
         st.metric("🚲 Disponibilidad media", f"{avg_disp}")
@@ -367,27 +377,34 @@ elif st.session_state.page == "Stats":
     st.subheader("📈 Disponibilidad Media por Hora")
     hourly = sub.groupby(sub["time"].dt.hour)["available_bikes"].mean()
     fig, ax = plt.subplots()
-    ax.plot(hourly.index, hourly.values)
+    ax.plot(hourly.index, hourly.values, marker="o")
     ax.set_xlabel("Hora del día")
     ax.set_ylabel("Bicicletas disponibles (media)")
-    ax.set_xticks(range(0,24,1))
+    ax.set_xticks(range(0,24))
     st.pyplot(fig)
 
     st.markdown("---")
 
     # 6) Heatmap día de semana vs hora
     st.subheader("🔥 Heatmap: Día de Semana vs Hora")
+    sub = sub.copy()
     sub["weekday"] = sub["time"].dt.day_name().str[:3]  # Lun, Mar...
-    heat = sub.pivot_table(
-        index="weekday", columns=sub["time"].dt.hour, 
-        values="available_bikes", aggfunc="mean"
-    ).reindex(["Mon","Tue","Wed","Thu","Fri","Sat","Sun"])
+    heat = (
+        sub
+        .pivot_table(
+            index="weekday",
+            columns=sub["time"].dt.hour,
+            values="available_bikes",
+            aggfunc="mean"
+        )
+        .reindex(["Mon","Tue","Wed","Thu","Fri","Sat","Sun"])
+    )
     fig2, ax2 = plt.subplots()
     im = ax2.imshow(heat, aspect="auto")
     ax2.set_yticks(range(len(heat.index))); ax2.set_yticklabels(heat.index)
-    ax2.set_xticks(range(0,24,1)); ax2.set_xticklabels(range(0,24,1))
+    ax2.set_xticks(range(0,24)); ax2.set_xticklabels(range(0,24))
     ax2.set_xlabel("Hora"); ax2.set_ylabel("Día de la semana")
-    fig2.colorbar(im, ax=ax2, label="Bicis disponibles")
+    fig2.colorbar(im, ax=ax2, label="Bicis disponibles (media)")
     st.pyplot(fig2)
 
     st.markdown("---")
