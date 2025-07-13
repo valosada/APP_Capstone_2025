@@ -312,73 +312,97 @@ elif st.session_state.page == "Map":
         
 # ─── 6. STATS ───────────────────────────────────────────────
 elif st.session_state.page == "Stats":
-    st.header("📊 Usage Statistics")
+    st.header("📊 Dashboard Combinado de Uso de Bicing")
 
-    # 1) Cargar el dataset local
+    # 1) Carga remota del CSV
     @st.cache_data
     def load_data():
-        # 1) URL de tu Release
         url = (
             "https://github.com/valosada/APP_Capstone_2025"
             "/releases/download/v1.0/bicing_interactive_dataset.csv"
         )
-        # 2) Descarga y revisión de estado
-        resp = requests.get(url)
-        resp.raise_for_status()  # detiene si da 404/403
-    
-        # 3) Decodifica y pásalo a pandas desde un StringIO
+        resp = requests.get(url); resp.raise_for_status()
         text = resp.content.decode("utf-8-sig")
         df = pd.read_csv(io.StringIO(text), parse_dates=["time"])
-        
-        # 4) Limpieza mínima
-        df = df.dropna(subset=["latitude", "longitude", "time", "available_bikes"])
-        return df
+        return df.dropna(subset=["latitude","longitude","available_bikes"])
 
     df = load_data()
 
-    # 2) Controles de filtrado
+    # 2) Barra lateral: filtros
     st.sidebar.header("Filtros")
     estaciones = sorted(df["name"].dropna().unique())
-    selected_station = st.sidebar.selectbox("Estación", estaciones)
-
+    sel_station = st.sidebar.selectbox("Estación", estaciones)
     min_date = df["time"].dt.date.min()
     max_date = df["time"].dt.date.max()
-    selected_date = st.sidebar.date_input("Fecha", value=min_date, min_value=min_date, max_value=max_date)
+    sel_dates = st.sidebar.date_input("Rango de fechas", [min_date, max_date], min_value=min_date, max_value=max_date)
+    sel_hour = st.sidebar.slider("Rango de horas", 0, 23, (0,23))
 
-    selected_hour = st.sidebar.slider("Hora del día", 0, 23, 12)
-
-    # 3) Filtrar los datos
+    # 3) Aplica filtros
     mask = (
-        (df["name"] == selected_station) &
-        (df["time"].dt.date == selected_date) &
-        (df["time"].dt.hour == selected_hour)
+        (df["name"] == sel_station) &
+        (df["time"].dt.date.between(sel_dates[0], sel_dates[1])) &
+        (df["time"].dt.hour.between(sel_hour[0], sel_hour[1]))
     )
     sub = df[mask]
     if sub.empty:
         st.warning("No hay datos para los filtros seleccionados.")
         st.stop()
 
-    # 4) KPI de disponibilidad
-    avg_bikes = int(sub["available_bikes"].mean())
-    st.subheader(f"📍 {selected_station} — {selected_date} a las {selected_hour}:00")
-    st.metric("Bicicletas disponibles (promedio)", f"{avg_bikes}")
+    # 4) KPIs generales
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("📅 Días seleccionados", f"{(sel_dates[1] - sel_dates[0]).days + 1}")
+    with col2:
+        avg_disp = sub["available_bikes"].mean().round(1)
+        st.metric("🚲 Disponibilidad media", f"{avg_disp}")
+    with col3:
+        num_empty = (sub["available_bikes"] == 0).sum()
+        num_full  = (sub["available_bikes"] >= sub["available_bikes"].max()).sum()
+        st.metric("⚠️ Vacías/llenas", f"{num_empty}/{num_full}")
 
-    # 5) Mapa centrado en la estación
-    lat0, lon0 = sub.iloc[0][["latitude", "longitude"]]
-    mapa = folium.Map(location=[lat0, lon0], zoom_start=15)
-    cluster = MarkerCluster().add_to(mapa)
+    st.markdown("---")
 
+    # 5) Gráfico de líneas: disponibilidad media por hora
+    st.subheader("📈 Disponibilidad Media por Hora")
+    hourly = sub.groupby(sub["time"].dt.hour)["available_bikes"].mean()
+    fig, ax = plt.subplots()
+    ax.plot(hourly.index, hourly.values)
+    ax.set_xlabel("Hora del día")
+    ax.set_ylabel("Bicicletas disponibles (media)")
+    ax.set_xticks(range(0,24,1))
+    st.pyplot(fig)
+
+    st.markdown("---")
+
+    # 6) Heatmap día de semana vs hora
+    st.subheader("🔥 Heatmap: Día de Semana vs Hora")
+    sub["weekday"] = sub["time"].dt.day_name().str[:3]  # Lun, Mar...
+    heat = sub.pivot_table(
+        index="weekday", columns=sub["time"].dt.hour, 
+        values="available_bikes", aggfunc="mean"
+    ).reindex(["Mon","Tue","Wed","Thu","Fri","Sat","Sun"])
+    fig2, ax2 = plt.subplots()
+    im = ax2.imshow(heat, aspect="auto")
+    ax2.set_yticks(range(len(heat.index))); ax2.set_yticklabels(heat.index)
+    ax2.set_xticks(range(0,24,1)); ax2.set_xticklabels(range(0,24,1))
+    ax2.set_xlabel("Hora"); ax2.set_ylabel("Día de la semana")
+    fig2.colorbar(im, ax=ax2, label="Bicis disponibles")
+    st.pyplot(fig2)
+
+    st.markdown("---")
+
+    # 7) Mapa de la estación
+    st.subheader("🗺️ Mapa: Ubicación y Disponibilidad")
+    lat0, lon0 = sub.iloc[0][["latitude","longitude"]]
+    m = folium.Map(location=[lat0, lon0], zoom_start=15)
+    cluster = MarkerCluster().add_to(m)
     def color(n):
         return "#2ECC71" if n>10 else ("#F39C12" if n>2 else "#E74C3C")
 
     for r in sub.itertuples():
-        popup = (
-            f"<b>{r.name}</b><br>"
-            f"{r.cross_street if hasattr(r, 'cross_street') else ''}<br>"
-            f"Disponibles: <b>{int(r.available_bikes)}</b>"
-        )
+        popup = f"<b>{r.name}</b><br>{getattr(r,'cross_street','')}<br>Disp: {int(r.available_bikes)}"
         folium.CircleMarker(
-            location=[r.latitude, r.longitude],
+            location=[r.latitude,r.longitude],
             radius=8,
             color=color(r.available_bikes),
             fill=True,
@@ -386,13 +410,17 @@ elif st.session_state.page == "Stats":
             fill_opacity=0.7,
             popup=folium.Popup(popup, max_width=200)
         ).add_to(cluster)
+    st_folium(m, width=800, height=450)
 
-    st.subheader("🗺️ Ubicación y disponibilidad")
-    st_folium(mapa, width=800, height=450)
+    st.markdown("---")
 
-    # 6) Tabla de valores
-    st.subheader("📄 Datos filtrados")
-    st.dataframe(sub.sort_values("time").drop(columns=["latitude","longitude"]))
+    # 8) Tabla de datos
+    st.subheader("📄 Datos Filtrados")
+    st.dataframe(
+        sub[["time","available_bikes","latitude","longitude"]]
+          .sort_values("time")
+          .reset_index(drop=True)
+    )
   
 # ─── 7. TEAM ────────────────────────────────────────────────
 elif st.session_state.page == "Team":
