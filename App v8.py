@@ -392,37 +392,6 @@ elif st.session_state.page == "Stats":
 
     st.markdown("---")
 
-    # 7) Mapa de la estación
-    st.subheader("🗺️ Mapa: Ubicación y Disponibilidad")
-    lat0, lon0 = sub.iloc[0][["latitude","longitude"]]
-    m = folium.Map(location=[lat0, lon0], zoom_start=15)
-    cluster = MarkerCluster().add_to(m)
-    def color(n):
-        return "#2ECC71" if n>10 else ("#F39C12" if n>2 else "#E74C3C")
-
-    for r in sub.itertuples():
-        popup = f"<b>{r.name}</b><br>{getattr(r,'cross_street','')}<br>Disp: {int(r.available_bikes)}"
-        folium.CircleMarker(
-            location=[r.latitude,r.longitude],
-            radius=8,
-            color=color(r.available_bikes),
-            fill=True,
-            fill_color=color(r.available_bikes),
-            fill_opacity=0.7,
-            popup=folium.Popup(popup, max_width=200)
-        ).add_to(cluster)
-    st_folium(m, width=800, height=450)
-
-    st.markdown("---")
-
-    # 8) Tabla de datos
-    st.subheader("📄 Datos Filtrados")
-    st.dataframe(
-        sub[["time","available_bikes","latitude","longitude"]]
-          .sort_values("time")
-          .reset_index(drop=True)
-    )
-  
 # ─── 7. TEAM ────────────────────────────────────────────────
 elif st.session_state.page == "Team":
     st.header("👥 Meet the Team")
