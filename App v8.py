@@ -542,38 +542,68 @@ elif st.session_state.page == "Ranking":
                 })
             )
 
-    # ─── 8) Comparación por barrio ─────────────────────────────
-    st.subheader("🏙️ Top-10 neighborhoods")
-    df_cs = df.dropna(subset=["cross_street", "available_bikes", "time", "station_id"])
-    rot = (
-        df_cs
-        .sort_values(["cross_street","station_id","time"])
-        .groupby(["cross_street","station_id"])["available_bikes"]
-        .apply(lambda s: s.diff().abs().mean())
-        .reset_index(name="mean_variation")
-    )
-    rot_cs = rot.groupby("cross_street")["mean_variation"].mean().sort_values(ascending=False)
-    sat_cs = df_cs.groupby("cross_street")["available_bikes"].mean().sort_values()
+# ─── 8) Comparación por barrio ─────────────────────────────
+st.subheader("🏙️ Top-10 neighborhoods")
 
-    st.markdown("**🏎️ Top neighborhoods by rotation (avg)**")
-    rot_tbl = (
-        rot_cs.head(10)
-        .reset_index()
-        .rename(columns={"cross_street":"Barrio","mean_variation":"Variación media"})
-    )
-    rot_tbl["Variación media"] = rot_tbl["Variación media"].astype(int)
-    st.table(rot_tbl)
+# 1) Filtramos filas válidas
+df_cs = df.dropna(subset=["cross_street", "available_bikes", "time", "station_id"]).copy()
 
-    st.markdown("**📦 Top neighborhoods by saturation (avg bikes)**")
-    sat_tbl = (
-        sat_cs.tail(10)
-        .reset_index()
-        .rename(columns={"cross_street":"Neighborhood","available_bikes":"Avg Bikes"})
-    )
-    sat_tbl["Avg Bikes"] = sat_tbl["Avg Bikes"].astype(int)
-    st.table(sat_tbl)
+# 2) Extraemos barrio: la parte antes de la primera '/'
+df_cs["neighborhood"] = df_cs["cross_street"].str.split("/", n=1).str[0]
 
-    st.markdown("---")
+# 3) Rotación media por estación, luego promedio por barrio
+rot = (
+    df_cs
+    .sort_values(["neighborhood","station_id","time"])
+    .groupby(["neighborhood","station_id"])["available_bikes"]
+    .apply(lambda s: s.diff().abs().mean())
+    .reset_index(name="mean_variation")
+)
+rot_cs = (
+    rot
+    .groupby("neighborhood")["mean_variation"]
+    .mean()
+    .sort_values(ascending=False)
+)
+
+# 4) Saturación media (bicis disponibles media) por barrio
+sat_cs = (
+    df_cs
+    .groupby("neighborhood")["available_bikes"]
+    .mean()
+    .sort_values()
+)
+
+# 5) Top 10 barrios por rotación
+st.markdown("**🏎️ Top-10 barrios por rotación (variación media)**")
+rot_tbl = (
+    rot_cs
+    .head(10)
+    .reset_index()
+    .rename(columns={
+        "neighborhood": "Barrio",
+        "mean_variation": "Variación media"
+    })
+)
+rot_tbl["Variación media"] = rot_tbl["Variación media"].astype(int)
+st.table(rot_tbl)
+
+# 6) Top 10 barrios por saturación
+st.markdown("**📦 Top-10 barrios por saturación (bicis disponibles media)**")
+sat_tbl = (
+    sat_cs
+    .tail(10)
+    .reset_index()
+    .rename(columns={
+        "neighborhood": "Barrio",
+        "available_bikes": "Bicis disp. media"
+    })
+)
+sat_tbl["Bicis disp. media"] = sat_tbl["Bicis disp. media"].astype(int)
+st.table(sat_tbl)
+
+st.markdown("---")
+
 
 # ─── 7. TEAM ────────────────────────────────────────────────
 elif st.session_state.page == "Team":
