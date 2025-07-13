@@ -319,13 +319,25 @@ elif st.session_state.page == "Spatial analysis":
 elif st.session_state.page == "Stats":
     st.header("📊 Usage Statistics")
 
-    # Cargar datos
+    # Cargar datos desde GitHub Release
     @st.cache_data
     def load_data():
-        df = pd.read_csv("bicing_interactive_dataset.csv", parse_dates=["time"])
+        url = (
+            "https://github.com/valosada/APP_Capstone_2025"
+            "/releases/download/v1.0/bicing_interactive_dataset.csv"
+        )
+        # 1) Descarga
+        resp = requests.get(url)
+        resp.raise_for_status()  # lanzará HTTPError si da 404/403
+    
+        # 2) Lee el contenido como texto y pásalo a pandas
+        text = resp.content.decode("utf-8-sig")
+        df = pd.read_csv(io.StringIO(text), parse_dates=["time"])
+    
+        # 3) Tu limpieza habitual
         df = df.dropna(subset=["latitude", "longitude"])
         return df
-    
+
     df = load_data()
     
     # Filtros en la barra lateral
