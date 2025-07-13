@@ -42,16 +42,18 @@ def navigate(page_name):
 
 # ─── 3. TOP NAVIGATION ──────────────────────────────────────
 st.markdown("<h1 style='text-align:center;'>🚲 Bicing Barcelona</h1>", unsafe_allow_html=True)
-c1, c2, c3, c4, c5 = st.columns(5)
+c1, c2, c3, c4, c5, c6 = st.columns(6)
 with c1:
     if st.button("🏠 Home"): navigate("Home")
 with c2:
-    if st.button("🗺️ Maps"): navigate("Maps")
+    if st.button("🏁 Kaggle Submission"): navigate("Prediction")
 with c3:
-    if st.button("📊 Stats"): navigate("Stats")
+    if st.button("🗺️ Maps"): navigate("Maps")
 with c4:
-    if st.button("📊 Ranking"): navigate("Ranking")
+    if st.button("📊 Stats"): navigate("Stats")
 with c5:
+    if st.button("📊 Ranking"): navigate("Ranking")
+with c6:
     if st.button("👥 Team"): navigate("Team")
 st.markdown("---")
 
@@ -97,6 +99,59 @@ if st.session_state.page == "Home":
         """, unsafe_allow_html=True)
     else:
         st.error("Logo not found at assets/UB logo.png")
+
+# ─── 9. SUBMISSION ─────────────────────────────────────────────
+elif st.session_state.page == "Prediction":
+    st.header("🏁 Kaggle Submission")
+
+    # 1) Cargo el CSV de tu submission ya subido al repo (o desde URL)
+    @st.cache_data
+    def load_submission(path="data/submission_local.csv"):
+        df = pd.read_csv(path)
+        return df
+
+    submission = load_submission()
+
+    # 2) Muestro las primeras filas
+    st.subheader("📋 Preview")
+    st.table(submission.head(10))
+
+    # 3) Estadísticas básicas
+    st.subheader("ℹ️ Estadísticas de la predicción")
+    st.write(submission.describe())
+
+    # 4) Histograma de las predicciones
+    st.subheader("📈 Distribución de Predicciones")
+    fig, ax = plt.subplots()
+    ax.hist(submission.iloc[:, 1], bins=30, edgecolor="k")  # asumiendo que la 2ª col es la pred
+    ax.set_xlabel("Predicción")
+    ax.set_ylabel("Frecuencia")
+    st.pyplot(fig)
+
+    # 5) (Opcional) Métricas si tienes un ground_truth.csv
+    gt_file = st.file_uploader("Sube ground_truth.csv para evaluar métricas", type="csv")
+    if gt_file:
+        truth = pd.read_csv(gt_file)
+        df_eval = submission.merge(truth, on="Id", how="inner")  # ajusta el nombre de la columna clave
+        y_true = df_eval["True"]
+        y_pred = df_eval["Predicted"]
+
+        st.subheader("🧮 Métricas de Evaluación")
+        mse = mean_squared_error(y_true, y_pred)
+        mae = mean_absolute_error(y_true, y_pred)
+        r2  = r2_score(y_true, y_pred)
+        st.metric("MSE", f"{mse:.2f}")
+        st.metric("MAE", f"{mae:.2f}")
+        st.metric("R²",  f"{r2:.2f}")
+
+        # Curva real vs predicha
+        st.subheader("🔍 Real vs. Predicho")
+        fig2, ax2 = plt.subplots()
+        ax2.scatter(y_true, y_pred, alpha=0.6)
+        ax2.plot([y_true.min(), y_true.max()],[y_true.min(), y_true.max()], 'r--')
+        ax2.set_xlabel("Valor verdadero")
+        ax2.set_ylabel("Valor predicho")
+        st.pyplot(fig2)
 
 # ─── 5. MAP ───────────────────────────────────────────────────
 elif st.session_state.page == "Maps":
