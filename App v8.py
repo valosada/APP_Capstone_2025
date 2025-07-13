@@ -433,7 +433,7 @@ elif st.session_state.page == "Stats":
 
 # ─── 7. RANKING ───────────────────────────────────────────────
 elif st.session_state.page == "Ranking":
-    st.header("🏆 Ranking de Estaciones")
+    st.header("🏆 Stations")
 
     # Reusar la función de carga del CSV
     @st.cache_data
@@ -450,7 +450,7 @@ elif st.session_state.page == "Ranking":
     df = load_data()
 
     # 1️⃣ Top-10 estaciones más usadas (variación media)
-    st.subheader("1️⃣ Top-10 Estaciones más Movidas")
+    st.subheader("1️⃣ Top-10 Movement")
     # Calculamos variación media absoluta
     df_sorted = (
         df
@@ -474,7 +474,7 @@ elif st.session_state.page == "Ranking":
     st.markdown("---")
 
     # 2️⃣ Estaciones Problema
-    st.subheader("2️⃣ Estaciones Problema")
+    st.subheader("2️⃣ Top-10 usage trends")
 
     # 2a) Vacías crónicamente: >50% registros con 0 bicis
     vacias = (
@@ -507,19 +507,19 @@ elif st.session_state.page == "Ranking":
 
     cols = st.columns(2)
     with cols[0]:
-        st.markdown("**📉 Vacías crónicamente (>50 %)**")
+        st.markdown("**📉 Empty (>10 %)**")
         if vacias.empty:
-            st.write("Ninguna estación supera el 50 % de tiempo vacía.")
+            st.write("No station remains empty more than 10% of the time.")
         else:
             st.table(vacias[["station_id","name","empty_ratio"]].rename(
-                columns={"station_id":"ID","name":"Estación","empty_ratio":"%Vacías"}))
+                columns={"station_id":"ID","name":"Station","empty_ratio":"%Empty"}))
     with cols[1]:
-        st.markdown("**📈 Llenas crónicamente (>50 %)**")
+        st.markdown("**📈 Full (>10 %)**")
         if llenas.empty:
-            st.write("Ninguna estación supera el 50 % de tiempo llena.")
+            st.write("No station remains full more than 10% of the time.")
         else:
             st.table(llenas[["station_id","name","full_ratio"]].rename(
-                columns={"station_id":"ID","name":"Estación","full_ratio":"%Llenas"}))
+                columns={"station_id":"ID","name":"Station","full_ratio":"%Full"}))
 
     # ─── 8) Comparación por barrio ─────────────────────────────
     st.subheader("🏙️ Comparación por barrio")
