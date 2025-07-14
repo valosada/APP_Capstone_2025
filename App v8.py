@@ -286,68 +286,34 @@ elif st.session_state.page == "Stats":
     st.image(heatmap_img, use_container_width=True)
     st.markdown("---")
 
-    # ─── 10) Comparación por estación climática ─────────────────────
-    st.subheader("🌦️ Average availability by hour & seasons")
+    # 6) Heatmap: Weekday vs Hour
+    st.subheader("🔥 Heatmap: Days & Time")
+    
+    # Preparamos el pivot table directamente desde df
+    pivot = df.pivot_table(
+        index=df['timestamp'].dt.day_name().str[:3],  # Lun, Mar…
+        columns=df['timestamp'].dt.hour,
+        values='mean_available_docks',                # o 'available_bikes' si lo prefieres
+        aggfunc='mean'
+    )
+    
+    # Reordenamos de lunes a domingo
+    order = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']
+    pivot = pivot.reindex(order)
+    
+    # Dibujamos con matplotlib
+    fig, ax = plt.subplots(figsize=(8,4))
+    cax = ax.imshow(pivot, aspect='auto', origin='lower')
+    ax.set_xticks(range(24))
+    ax.set_xticklabels(range(24))
+    ax.set_yticks(range(len(order)))
+    ax.set_yticklabels(order)
+    ax.set_xlabel("Hour of Day")
+    ax.set_ylabel("Weekday")
+    ax.set_title("Mean Available Docks by Weekday & Hour")
+    fig.colorbar(cax, ax=ax, label="Mean docks")
+    st.pyplot(fig)
 
-   # 3) Filtrado
-    mask = (
-        ((df["station_id"] == sel_station_id) if sel_station_id is not None else True) &
-        df["time"].dt.date.between(sel_dates[0], sel_dates[1]) &
-        df["time"].dt.hour.between(sel_hours[0], sel_hours[1])
-    )
-    sub = df[mask]
-    if sub.empty:
-        st.warning("No data.")
-        st.stop()
-    
-    # 1) Definir función que mapea mes → estación climática
-    def month_to_season(month):
-        if month in (12, 1, 2):
-            return "Winter"
-        elif month in (3, 4, 5):
-            return "Spring"
-        elif month in (6, 7, 8):
-            return "Summer"
-        else:
-            return "Autumn"
-    
-    # 2) Trabajamos sobre tu subset 'sub' que ya está filtrado por estación, fechas y horas
-    data_season = sub.copy()
-    
-    # 3) Creamos la columna 'season'
-    data_season["season"] = data_season["time"].dt.month.apply(month_to_season)
-    
-    # 4) Calculamos disponibilidad media por (season, hour)
-    hourly_season = (
-        data_season
-          .groupby([
-              "season",
-              data_season["time"].dt.hour.rename("hour")
-          ])["available_bikes"]
-          .mean()
-          .reset_index(name="avg_bikes")
-    )
-    
-    # 5) Dibujamos 4 gráficos (2×2) para Invierno, Primavera, Verano y Otoño
-    seasons = ["Winter","Spring","Summer","Autumn"]
-    cols = st.columns(2)
-    
-    for i, season in enumerate(seasons):
-        df_s = hourly_season[hourly_season["season"] == season]
-        with cols[i % 2]:
-            if df_s.empty:
-                st.warning(f"No hay datos para {season}")
-                continue
-    
-            st.markdown(f"**{season}**")
-            fig, ax = plt.subplots()
-            ax.plot(df_s["hour"], df_s["avg_bikes"], marker="o")
-            ax.set_xlabel("Hours")
-            ax.set_ylabel("Available bikes (avg)")
-            ax.set_xticks(range(0,24,2))
-            ax.set_title(season)
-            ax.grid(alpha=0.3)
-            st.pyplot(fig)
 
 # ─── 7. RANKING ───────────────────────────────────────────────
 elif st.session_state.page == "Ranking":
