@@ -243,14 +243,14 @@ elif st.session_state.page == "Maps":
     
     with col1:
         st.subheader("Morning Availability")
-        st.image(am_img, use_column_width=True, caption="Availability at 8 AM")
+        st.image(am_img, use_container_width=True, caption="Availability at 8 AM")
     
     with col2:
         st.subheader("Afternoon Availability")
-        st.image(pm_img, use_column_width=True, caption="Availability at 6 PM")
+        st.image(pm_img, use_container_width=True, caption="Availability at 6 PM")
     
     st.subheader("Population Density")
-    st.image(population_img, use_column_width=True, caption="Population per census tract")
+    st.image(population_img, use_container_width=True, caption="Population per census tract")
 
 
 # ─── 6. STATS ───────────────────────────────────────────────
