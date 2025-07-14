@@ -283,7 +283,7 @@ elif st.session_state.page == "Stats":
     try:
         lines_img   = Image.open("data/Dock available altitude hour.jpg")
         heatmap_img = Image.open(
-            "data/Heatmap main change in availability per altitude and hour.jpg"
+            "data/Heatmep main change in availability per altitude and hour.jpg"
         )
     except FileNotFoundError as e:
         st.error(f"No pude encontrar la imagen: {e.filename}")
