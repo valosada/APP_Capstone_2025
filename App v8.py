@@ -276,57 +276,18 @@ elif st.session_state.page == "Stats":
 
     df = load_data()
 
-    # ─── 2) Controles principales ───────────────────────────────
-    # Selección de estación
-    unique_stations = (
-        df[["station_id","name"]]
-        .drop_duplicates()
-        .sort_values("station_id")
-    )
-    station_options = ["All stations"] + [
-        f"{row.station_id} - {row.name}"
-        for row in unique_stations.itertuples()
-    ]
-    sel_label = st.selectbox("Station", station_options)
-    sel_station_id = None if sel_label == "All stations" else int(sel_label.split(" - ")[0])
-
-    # Selección de rango de fechas
-    dates = sorted(df["time"].dt.date.unique())
-    sel_dates = st.select_slider(
-        "Select timeframe",
-        options=dates,
-        value=(dates[0], dates[-1]),
-        format_func=lambda d: d.strftime("%Y-%m-%d")
-    )
-
-    # Selección de rango de horas
-    sel_hours = st.slider(
-        "Select time range",
-        min_value=0, max_value=23,
-        value=(0,23)
-    )
-
-    st.markdown("---")
-
-    # 3) Filtrado de datos en 'sub'
-    mask = (
-        ((df["station_id"] == sel_station_id) if sel_station_id is not None else True)
-        & df["time"].dt.date.between(sel_dates[0], sel_dates[1])
-        & df["time"].dt.hour.between(sel_hours[0], sel_hours[1])
-    )
-    sub = df[mask]
+    # ─── 2) No filtering by station, use full dataset
+    sub = df.copy()
     if sub.empty:
-        st.warning("No data for your selection.")
+        st.warning("No data available.")
         st.stop()
 
-    # ─── 4) Imágenes de Disponibilidad vs Población ─────────────────
+    # ─── 3) Imágenes de Disponibilidad vs Población ────────────────
     st.header("🚲👨🏻‍👩🏻‍👧🏻‍🧒🏻 Comparison of Bike Availability and Population")
 
     try:
         lines_img   = Image.open("data/Dock available altitude hour.jpg")
-        heatmap_img = Image.open(
-            "data/Heatmep main change in availability per altitude and hour.jpg"
-        )
+        heatmap_img = Image.open("data/Heatmap main change in availability per altitude and hour.jpg")
     except FileNotFoundError as e:
         st.error(f"No pude encontrar la imagen: {e.filename}")
         st.stop()
@@ -339,10 +300,10 @@ elif st.session_state.page == "Stats":
     st.image(heatmap_img, use_container_width=True)
     st.markdown("---")
 
-    # ─── 5) Comparación por estación climática ─────────────────────
+    # ─── 4) Comparación por estación climática ─────────────────────
     st.subheader("🌦️ Average availability by hour & seasons")
 
-    # Función para mapear mes → estación climática
+    # Función mes → estación climática
     def month_to_season(m):
         if m in (12, 1, 2):
             return "Winter"
@@ -353,11 +314,10 @@ elif st.session_state.page == "Stats":
         else:
             return "Autumn"
 
-    # Trabajamos sobre 'sub' ya filtrado
     data_season = sub.copy()
     data_season["season"] = data_season["time"].dt.month.apply(month_to_season)
 
-    # Media de bicis disponibles por (season, hour)
+    # Media de available_bikes por (season, hour)
     hourly_season = (
         data_season
         .groupby([
@@ -368,7 +328,7 @@ elif st.session_state.page == "Stats":
         .reset_index(name="avg_bikes")
     )
 
-    # Dibujamos 4 mini‑gráficos (2×2)
+    # Dibujar 4 mini‑gráficos (2×2) para cada estación climática
     seasons = ["Winter", "Spring", "Summer", "Autumn"]
     cols = st.columns(2)
     for i, season in enumerate(seasons):
