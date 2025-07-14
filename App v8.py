@@ -351,7 +351,8 @@ elif st.session_state.page == "Stats":
     st.subheader("Holidays")
 
     # 1️⃣ Carga y parseo
-    df = pd.read_csv("merged_bicing_data.csv")
+    url = "https://raw.githubusercontent.com/valosada/APP_Capstone_2025/main/data/merged_bicing_data.csv"
+    df  = pd.read_csv(url)
     df['date'] = pd.to_datetime(df[['year','month','day']]).dt.date
     df['hour'] = pd.to_datetime(df[['year','month','day','hour']]).dt.hour
     
