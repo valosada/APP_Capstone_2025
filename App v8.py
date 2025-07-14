@@ -623,7 +623,7 @@ elif st.session_state.page == "Ranking":
 
     cols = st.columns(2)
     with cols[0]:
-        st.markdown("**📉 Empty (>10 %)**")
+        st.markdown("**📉 Remains empty >10% time**")
         if vacias.empty:
             st.write("No station remains empty more than 10% of the time.")
         else:
@@ -636,7 +636,7 @@ elif st.session_state.page == "Ranking":
                 })
             )
     with cols[1]:
-        st.markdown("**📈 Full (>10 %)**")
+        st.markdown("**📈 Remains full >10% time**")
         if llenas.empty:
             st.write("No station remains full more than 10% of the time.")
         else:
