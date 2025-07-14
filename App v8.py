@@ -231,7 +231,7 @@ elif st.session_state.page == "Maps":
         st_folium(m, width=800, height=400)
 
     # 4.2 Animated Map: Availability Over Time
-    st.subheader("Comparison of Bike Availability and Population")
+    st.header("🚲👨🏻‍👩🏻‍👧🏻‍🧒🏻 Comparison of Bike Availability and Population")
     
     # 1. Carga las imágenes desde disco
     am_img         = Image.open("data/AM.jpg")          # mañana
