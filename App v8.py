@@ -400,10 +400,6 @@ elif st.session_state.page == "Stats":
     # 5) KPI resumen
     work_avg = df.loc[~df.is_holiday, 'available_bikes'].mean()
     holi_avg = df.loc[ df.is_holiday, 'available_bikes'].mean()
-    st.metric("Workday avg bikes", f"{work_avg:.1f}")
-    st.metric("Holiday/August avg bikes", f"{holi_avg:.1f}")
-
-    st.markdown("---")
 
     # 6) Línea comparativa Workday vs Holidays
     cmp = df.groupby(['hour','is_holiday'])['available_bikes'].mean().unstack()
