@@ -286,30 +286,6 @@ elif st.session_state.page == "Stats":
     st.image(heatmap_img, use_container_width=True)
     st.markdown("---")
 
-    # 6) Heatmap día de semana vs hora
-    st.subheader("🔥 Heatmap: Days & Time")
-    temp = sub.copy()
-    temp["weekday"] = temp["time"].dt.day_name().str[:3]
-    heat = (
-        temp
-        .pivot_table(
-            index="weekday",
-            columns=temp["time"].dt.hour,
-            values="available_bikes",
-            aggfunc="mean"
-        )
-        .reindex(["Mon","Tue","Wed","Thu","Fri","Sat","Sun"])
-    )
-    fig2, ax2 = plt.subplots()
-    im = ax2.imshow(heat, aspect="auto")
-    ax2.set_yticks(range(len(heat.index))); ax2.set_yticklabels(heat.index)
-    ax2.set_xticks(range(0,24)); ax2.set_xticklabels(range(0,24))
-    ax2.set_xlabel("Hora"); ax2.set_ylabel("Day of the week")
-    fig2.colorbar(im, ax=ax2, label="Available bikes (average)")
-    st.pyplot(fig2)
-
-    st.markdown("---")
-
     # ─── 10) Comparación por estación climática ─────────────────────
     st.subheader("🌦️ Average availability by hour & seasons")
 
