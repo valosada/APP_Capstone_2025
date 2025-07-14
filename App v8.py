@@ -312,6 +312,17 @@ elif st.session_state.page == "Stats":
 
     # ─── 10) Comparación por estación climática ─────────────────────
     st.subheader("🌦️ Average availability by hour & seasons")
+
+   # 3) Filtrado
+    mask = (
+        ((df["station_id"] == sel_station_id) if sel_station_id is not None else True) &
+        df["time"].dt.date.between(sel_dates[0], sel_dates[1]) &
+        df["time"].dt.hour.between(sel_hours[0], sel_hours[1])
+    )
+    sub = df[mask]
+    if sub.empty:
+        st.warning("No data.")
+        st.stop()
     
     # 1) Definir función que mapea mes → estación climática
     def month_to_season(month):
