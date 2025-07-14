@@ -282,9 +282,7 @@ elif st.session_state.page == "Stats":
         st.warning("No data available.")
         st.stop()
 
-    # ─── 3) Imágenes de Disponibilidad vs Población ────────────────
-    st.header("🚲👨🏻‍👩🏻‍👧🏻‍🧒🏻 Comparison of Bike Availability and Population")
-
+    # ─── 3) Imágenes de Disponibilidad vs Población ───────────────
     try:
         lines_img   = Image.open("data/Dock available altitude hour.jpg")
         heatmap_img = Image.open("data/Heatmep main change in availability per altitude and hour.jpg")
