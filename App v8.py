@@ -257,63 +257,75 @@ elif st.session_state.page == "Maps":
 elif st.session_state.page == "Stats":
     st.header("📊 Bicing usage patterns")
 
-    # 1) Carga remota del CSV
+    import requests, io
+    from PIL import Image
+    import matplotlib.pyplot as plt
+
+    # 1) Carga remota del CSV con parseo de 'time'
     @st.cache_data
     def load_data():
         url = (
             "https://github.com/valosada/APP_Capstone_2025"
             "/releases/download/v1.0/bicing_interactive_dataset.csv"
         )
-        resp = requests.get(url); resp.raise_for_status()
+        resp = requests.get(url)
+        resp.raise_for_status()
         text = resp.content.decode("utf-8-sig")
         df = pd.read_csv(io.StringIO(text), parse_dates=["time"])
         return df.dropna(subset=["latitude","longitude","available_bikes"])
 
     df = load_data()
 
-    # 4.2 Animated Map: Availability Over Time
+    # ─── Imágenes de Disponibilidad vs Población ─────────────────
     st.header("🚲👨🏻‍👩🏻‍👧🏻‍🧒🏻 Comparison of Bike Availability and Population")
-    
-    # 1. Carga las imágenes desde disco
-    lines_img         = Image.open("data/Dock available altitude hour.jpg")          # lines
-    heatmap_img         = Image.open("data/Heatmep main change in availability per altitude and hour.jpg")          # heatmap
+
+    # Carga segura de imágenes (se detiene si faltan)
+    try:
+        lines_img   = Image.open("data/Dock available altitude hour.jpg")
+        heatmap_img = Image.open(
+            "data/Heatmap main change in availability per altitude and hour.jpg"
+        )
+    except FileNotFoundError as e:
+        st.error(f"No pude encontrar la imagen: {e.filename}")
+        st.stop()
 
     st.subheader("Dock availability per altitude and hours")
     st.image(lines_img, use_container_width=True)
     st.markdown("---")
-  
+
     st.subheader("Heatmap: Availability (%) per altitude and hours")
     st.image(heatmap_img, use_container_width=True)
     st.markdown("---")
 
-    # 6) Heatmap: Weekday vs Hour
+    # ─── Heatmap: Días vs Hora ───────────────────────────────────
     st.subheader("🔥 Heatmap: Days & Time")
-    
-    # Preparamos el pivot table directamente desde df
+
+    # 2) Pivot table usando 'time'
     pivot = df.pivot_table(
-        index=df['timestamp'].dt.day_name().str[:3],  # Lun, Mar…
-        columns=df['timestamp'].dt.hour,
-        values='mean_available_docks',                # o 'available_bikes' si lo prefieres
-        aggfunc='mean'
+        index=df["time"].dt.day_name().str[:3],   # Lun, Mar…
+        columns=df["time"].dt.hour,
+        values="available_bikes",                 # o 'mean_available_docks'
+        aggfunc="mean"
     )
-    
-    # Reordenamos de lunes a domingo
-    order = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']
+
+    # 3) Reordenar los días de la semana
+    order = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]
     pivot = pivot.reindex(order)
-    
-    # Dibujamos con matplotlib
+
+    # 4) Dibujar con matplotlib
     fig, ax = plt.subplots(figsize=(8,4))
-    cax = ax.imshow(pivot, aspect='auto', origin='lower')
+    cax = ax.imshow(pivot, aspect="auto", origin="lower")
     ax.set_xticks(range(24))
     ax.set_xticklabels(range(24))
     ax.set_yticks(range(len(order)))
     ax.set_yticklabels(order)
     ax.set_xlabel("Hour of Day")
     ax.set_ylabel("Weekday")
-    ax.set_title("Mean Available Docks by Weekday & Hour")
-    fig.colorbar(cax, ax=ax, label="Mean docks")
-    st.pyplot(fig)
+    ax.set_title("Mean Available Bikes by Weekday & Hour")
+    fig.colorbar(cax, ax=ax, label="Mean available bikes")
+    plt.tight_layout()
 
+    st.pyplot(fig)
 
 # ─── 7. RANKING ───────────────────────────────────────────────
 elif st.session_state.page == "Ranking":
