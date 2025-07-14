@@ -276,14 +276,24 @@ elif st.session_state.page == "Stats":
 
     df = load_data()
 
+    # 3) Filtrado
+    mask = (
+        ((df["station_id"] == sel_station_id) if sel_station_id is not None else True)
+        & df["time"].dt.date.between(sel_dates[0], sel_dates[1])
+        & df["time"].dt.hour.between(sel_hours[0], sel_hours[1])
+    )
+    sub = df[mask]
+    if sub.empty:
+        st.warning("No data for your selection.")
+        st.stop()
+
     # ─── Imágenes de Disponibilidad vs Población ─────────────────
     st.header("🚲👨🏻‍👩🏻‍👧🏻‍🧒🏻 Comparison of Bike Availability and Population")
 
-    # Carga segura de imágenes (se detiene si faltan)
     try:
         lines_img   = Image.open("data/Dock available altitude hour.jpg")
         heatmap_img = Image.open(
-            "data/Heatmep main change in availability per altitude and hour.jpg"
+            "data/Heatmap main change in availability per altitude and hour.jpg"
         )
     except FileNotFoundError as e:
         st.error(f"No pude encontrar la imagen: {e.filename}")
@@ -299,8 +309,8 @@ elif st.session_state.page == "Stats":
 
     # ─── 10) Comparación por estación climática ─────────────────────
     st.subheader("🌦️ Average availability by hour & seasons")
-    
-    # 1) Función para mapear mes → estación climática
+
+    # 1) Función mes → estación climática
     def month_to_season(month):
         if month in (12, 1, 2):
             return "Winter"
@@ -310,28 +320,28 @@ elif st.session_state.page == "Stats":
             return "Summer"
         else:
             return "Autumn"
-    
-    # 2) Partimos de 'sub' (filtrado por fecha/periodo)
+
+    # 2) Trabajamos sobre 'sub' que ya está filtrado
     data_season = sub.copy()
-    
-    # 3) Creamos la columna 'season'
+
+    # 3) Creamos 'season'
     data_season["season"] = data_season["time"].dt.month.apply(month_to_season)
-    
-    # 4) Calculamos disponibilidad media por (season, hour)
+
+    # 4) Media de available_bikes por (season, hour)
     hourly_season = (
         data_season
-          .groupby([
-              "season",
-              data_season["time"].dt.hour.rename("hour")
-          ])["available_bikes"]
-          .mean()
-          .reset_index(name="avg_bikes")
+        .groupby([
+            "season",
+            data_season["time"].dt.hour.rename("hour")
+        ])["available_bikes"]
+        .mean()
+        .reset_index(name="avg_bikes")
     )
-    
-    # 5) Dibujamos 4 gráficos en 2×2 para cada estación
+
+    # 5) Dibujar 4 gráficos (2×2) para cada estación
     seasons = ["Winter", "Spring", "Summer", "Autumn"]
     cols = st.columns(2)
-    
+
     for i, season in enumerate(seasons):
         df_s = hourly_season[hourly_season["season"] == season]
         with cols[i % 2]:
@@ -343,7 +353,7 @@ elif st.session_state.page == "Stats":
                 ax.plot(df_s["hour"], df_s["avg_bikes"], marker="o")
                 ax.set_xlabel("Hour of Day")
                 ax.set_ylabel("Available Bikes (avg)")
-                ax.set_xticks(range(0, 24, 2))
+                ax.set_xticks(range(0,24,2))
                 ax.set_title(season)
                 ax.grid(alpha=0.3)
                 st.pyplot(fig)
