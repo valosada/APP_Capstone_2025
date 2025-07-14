@@ -347,19 +347,28 @@ elif st.session_state.page == "Stats":
               
     st.markdown("---")
 
-    # ─── 4) Comparación por festivos─────────────────────
+    # ─── 4) Comparación por festivos ─────────────────────
     st.subheader("Holidays")
 
-    # 1️⃣ Carga y parseo
-    url = (
-        "https://github.com/valosada/APP_Capstone_2025"
-        "/releases/download/v1.0/bicing_interactive_dataset.csv"
-    )
-    df  = pd.read_csv(url)
-    df['date'] = pd.to_datetime(df[['year','month','day']]).dt.date
-    df['hour'] = pd.to_datetime(df[['year','month','day','hour']]).dt.hour
-    
-    # 2️⃣ Festivos fijos de Cataluña
+    # 1) Carga remota del CSV con parseo de 'time'
+    @st.cache_data
+    def load_data():
+        url = (
+            "https://github.com/valosada/APP_Capstone_2025"
+            "/releases/download/v1.0/bicing_interactive_dataset.csv"
+        )
+        resp = requests.get(url); resp.raise_for_status()
+        text = resp.content.decode("utf-8-sig")
+        df = pd.read_csv(io.StringIO(text), parse_dates=["time"])
+        return df.dropna(subset=["latitude","longitude","available_bikes"])
+
+    df = load_data()
+
+    # 2) Extraer date y hour
+    df['date'] = df['time'].dt.date
+    df['hour'] = df['time'].dt.hour
+
+    # 3) Definir festivos fijos
     fixed = {
         "New Year":   (1, 1),
         "Sant Jordi": (4,23),
@@ -367,78 +376,65 @@ elif st.session_state.page == "Stats":
         "La Mercè":   (9,24),
         "Christmas":  (12,25),
     }
-    years = df['date'].apply(lambda d: d.year).unique()
+    years = sorted(df['date'].apply(lambda d: d.year).unique())
     hols = []
     for name,(m,d) in fixed.items():
         for y in years:
-            hols.append({'date': pd.to_datetime(f"{y}-{m:02d}-{d:02d}").date(), 'holiday': name})
+            hols.append({
+                'date': pd.to_datetime(f"{y}-{m:02d}-{d:02d}").date(),
+                'holiday': name
+            })
     # Pascua
     for y in years:
         hols.append({'date': easter(y), 'holiday': "Easter"})
     hols_df = pd.DataFrame(hols).drop_duplicates('date')
-    
-    # 3️⃣ Merge y mes de agosto
+
+    # 4) Merge y marcar agosto
     df = df.merge(hols_df, on='date', how='left')
-    df.loc[df['date'].apply(lambda d: d.month)==8, 'holiday'] = df['holiday'].fillna("August vacation")
+    df.loc[df['date'].apply(lambda d: d.month)==8, 'holiday'] = (
+        df['holiday'].fillna("August vacation")
+    )
     df['is_holiday'] = df['holiday'].notna()
-    
-    # 4️⃣ KPI resumen
+
+    # 5) KPI resumen
     work_avg = df.loc[~df.is_holiday, 'available_bikes'].mean()
-    holi_avg = df.loc[df.is_holiday,  'available_bikes'].mean()
-    print(f"Workday avg bikes:  {work_avg:.1f}")
-    print(f"Holiday avg bikes:  {holi_avg:.1f}")
-    
-    # 5️⃣ Línea comparativa Workday vs Holidays
+    holi_avg = df.loc[ df.is_holiday, 'available_bikes'].mean()
+    st.metric("Workday avg bikes", f"{work_avg:.1f}")
+    st.metric("Holiday/August avg bikes", f"{holi_avg:.1f}")
+
+    st.markdown("---")
+
+    # 6) Línea comparativa Workday vs Holidays
     cmp = df.groupby(['hour','is_holiday'])['available_bikes'].mean().unstack()
-    plt.figure(figsize=(8,4))
-    cmp.plot(title="Avg available bikes by hour\nWorkday vs Holidays/August")
-    plt.xlabel("Hour of Day")
-    plt.ylabel("Avg available bikes")
-    plt.legend(["Workday","Holiday/August"])
-    plt.grid(alpha=0.3)
-    plt.tight_layout()
-    plt.show()
-    
-    # 6️⃣ Heatmaps lado a lado
-    import numpy as np
-    wk = df[df.is_holiday==False].pivot_table(index=df['date'].apply(lambda d: d.weekday()),
-                                              columns='hour', values='available_bikes', aggfunc='mean')
-    hd = df[df.is_holiday==True].pivot_table(index=df['date'].apply(lambda d: d.weekday()),
-                                             columns='hour', values='available_bikes', aggfunc='mean')
-    days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']
-    
-    fig, axes = plt.subplots(1,2, figsize=(12,4), sharey=True)
-    for ax, data, title in zip(axes, [wk, hd], ["Workdays","Holidays/August"]):
-        arr = data.reindex(range(7)).values
-        im = ax.imshow(arr, aspect='auto', origin='lower')
-        ax.set_xticks(range(24)); ax.set_xticklabels(range(24))
-        ax.set_yticks(range(7));  ax.set_yticklabels(days)
-        ax.set_title(title)
-    fig.colorbar(im, ax=axes.ravel().tolist(), label="Avg bikes")
-    plt.tight_layout()
-    plt.show()
-    
-    # 7️⃣ Small multiples por cada festivo
+    fig0, ax0 = plt.subplots(figsize=(8,3))
+    cmp.plot(ax=ax0)
+    ax0.set_title("Avg available bikes by hour\nWorkday vs Holidays/August")
+    ax0.set_xlabel("Hour of Day")
+    ax0.set_ylabel("Avg available bikes")
+    ax0.legend(["Workday","Holiday/August"])
+    ax0.grid(alpha=0.3)
+    st.pyplot(fig0)
+
+    st.markdown("---")
+
+    # 7) Small multiples por cada festivo
     unique_hols = df['holiday'].dropna().unique()
     n = len(unique_hols)
     cols = 2
-    rows = (n + 1)//2
+    rows = (n + cols - 1)//cols
     fig, axs = plt.subplots(rows, cols, figsize=(8,4*rows), sharex=True, sharey=True)
     for ax, hol in zip(axs.ravel(), unique_hols):
         sub = df[df.holiday==hol]
-        if sub.empty:
-            continue
         hourly = sub.groupby('hour')['available_bikes'].mean()
         ax.plot(hourly.index, hourly.values, marker='o')
         ax.set_title(hol)
         ax.set_xticks(range(0,24,4))
         ax.grid(alpha=0.3)
+    # Apaga ejes sobrantes
     for ax in axs.ravel()[len(unique_hols):]:
         ax.axis('off')
     fig.suptitle("Hourly availability on each holiday", y=0.92)
-    plt.tight_layout()
-    plt.show()
-
+    st.pyplot(fig)
 # ─── 7. RANKING ───────────────────────────────────────────────
 elif st.session_state.page == "Ranking":
     st.header("🏆 Stations")
