@@ -525,7 +525,7 @@ elif st.session_state.page == "Team":
     team = [
         {"name":"Agustín Jaime","img":"assets/vicky.jpg"},
         {"name":"Javier Verba","img":"assets/vicky.jpg"},
-        {"name":"Mariana Henriques","img":"assets/vicky.jpg"},
+        {"name":"Mariana Henriques","img":"assets/Mariana.jpg"},
         {"name":"Victoria Losada","img":"assets/vicky.jpg"},
     ]
     cols = st.columns(4, gap="small")
