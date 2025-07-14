@@ -232,126 +232,126 @@ elif st.session_state.page == "Maps":
     # 4.2 Animated Map: Availability Over Time
     st.subheader("⏱️ Bikes availability over time")
 
-   @st.cache_data
-  def load_availability():
-      # 1) Descarga el CSV desde tu GitHub Release
-      url = "https://github.com/valosada/APP_Capstone_2025/releases/download/v1.0/final_sorted.csv"
-      resp = requests.get(url)
-      resp.raise_for_status()
-      text = resp.content.decode("utf-8-sig")
-      df = pd.read_csv(io.StringIO(text))
-      # 2) Limpieza y parseo
-      df.columns = df.columns.str.strip().str.replace("\ufeff", "")
-      df["time"] = pd.to_datetime(df[["year","month","day","hour"]], errors="coerce")
-      df["station_id"] = (
-          df["station_id"].astype(str)
-            .str.lstrip("0")
-            .pipe(pd.to_numeric, errors="coerce")
-            .astype("Int64")
-      )
-      df["available_bikes"] = (
-          pd.to_numeric(df["mean_available_docks"], errors="coerce")
-            .round()
-            .astype("Int64")
-      )
-      return df.dropna(subset=["station_id","time","available_bikes"])[
-          ["station_id","time","available_bikes"]
-      ]
-  
-  @st.cache_data
-  def load_stations_for_anim():
-      path = "data/Informacio_Estacions_Bicing_2025.csv"
-      if not os.path.exists(path):
-          st.error(f"❌ No encuentro el fichero {path}")
-          st.stop()
-      df = pd.read_csv(path, encoding="latin1")
-      df.columns = df.columns.str.strip().str.replace("\ufeff","")
-      df["station_id"] = (
-          df["station_id"].astype(str)
-            .str.lstrip("0")
-            .pipe(pd.to_numeric, errors="coerce")
-            .astype("Int64")
-      )
-      df = df.rename(columns={"lat":"latitude","lon":"longitude"})
-      # Asegura la columna cross_street
-      if "cross_street" not in df.columns and "cross street" in df.columns:
-          df["cross_street"] = df["cross street"]
-      return df[["station_id","name","cross_street","latitude","longitude"]]
-  
-  # Carga y merge
-  avail_df    = load_availability()
-  stations_df = load_stations_for_anim()
-  merged      = pd.merge(avail_df, stations_df, on="station_id", how="inner")
-  if merged.empty:
-      st.error("❌ No hay datos tras hacer el merge por 'station_id'")
-      st.stop()
-  
-  # Preparar columnas de fecha y hora
-  merged["date"] = merged["time"].dt.date
-  merged["hour"] = merged["time"].dt.hour
-  
-  # Selector de fecha
-  dates = sorted(merged["date"].unique())
-  selected_date = st.select_slider(
-      "Select date",
-      options=dates,
-      value=dates[0],
-      format_func=lambda d: d.strftime("%Y-%m-%d")
-  )
-  
-  # Selector de periodo del día
-  periods = {
-      "Mañana (6–12h)": range(6,12),
-      "Tarde  (12–18h)": range(12,18),
-      "Noche  (18–24h)": range(18,24)
-  }
-  selected_period = st.selectbox("Select period of day", list(periods.keys()))
-  
-  # Filtrar por fecha y período
-  hour_range = periods[selected_period]
-  subset = merged[
-      (merged["date"] == selected_date) &
-      (merged["hour"].isin(hour_range))
-  ]
-  if subset.empty:
-      st.warning(f"No data on {selected_date} during {selected_period}")
-      st.stop()
-  
-  # Función para colorear según bicis disponibles
-  def bike_color(n):
-      if n < 2:     return "#E74C3C"  # rojo
-      elif n <= 10: return "#F39C12"  # naranja
-      else:         return "#2ECC71"  # verde
-  
-  # Crear mapa
-  m = folium.Map(location=[41.3851, 2.1734], zoom_start=13)
-  for r in subset.itertuples(index=False):
-      col       = bike_color(r.available_bikes)
-      name      = getattr(r, "name", "Sin nombre")
-      barrio    = getattr(r, "cross_street", "Barrio desconocido")
-      available = int(round(r.available_bikes))
-      lat, lon  = r.latitude, r.longitude
-  
-      popup_html = f"""
-        <div style='font-family:sans-serif; font-size:13px;'>
-          <b>{name}</b><br>
-          <span style='color:#555;'>{barrio}</span><br>
-          Available: <b>{available}</b>
-        </div>
-      """
-      folium.CircleMarker(
-          location=[lat, lon],
-          radius=6,
-          color=col,
-          fill=True,
-          fill_color=col,
-          fill_opacity=0.7,
-          popup=folium.Popup(popup_html, max_width=250)
-      ).add_to(m)
-  
-  # Mostrar mapa
-  st.subheader(f"Availability on {selected_date} — {selected_period}")
-  st_folium(m, width=800, height=500)
+    @st.cache_data
+    def load_availability():
+        # 1) Descarga el CSV desde tu GitHub Release
+        url = "https://github.com/valosada/APP_Capstone_2025/releases/download/v1.0/final_sorted.csv"
+        resp = requests.get(url)
+        resp.raise_for_status()
+        text = resp.content.decode("utf-8-sig")
+        df = pd.read_csv(io.StringIO(text))
+        # 2) Limpieza y parseo
+        df.columns = df.columns.str.strip().str.replace("\ufeff", "")
+        df["time"] = pd.to_datetime(df[["year","month","day","hour"]], errors="coerce")
+        df["station_id"] = (
+            df["station_id"].astype(str)
+              .str.lstrip("0")
+              .pipe(pd.to_numeric, errors="coerce")
+              .astype("Int64")
+        )
+        df["available_bikes"] = (
+            pd.to_numeric(df["mean_available_docks"], errors="coerce")
+              .round()
+              .astype("Int64")
+        )
+        return df.dropna(subset=["station_id","time","available_bikes"])[
+            ["station_id","time","available_bikes"]
+        ]
+    
+    @st.cache_data
+    def load_stations_for_anim():
+        path = "data/Informacio_Estacions_Bicing_2025.csv"
+        if not os.path.exists(path):
+            st.error(f"❌ No encuentro el fichero {path}")
+            st.stop()
+        df = pd.read_csv(path, encoding="latin1")
+        df.columns = df.columns.str.strip().str.replace("\ufeff","")
+        df["station_id"] = (
+            df["station_id"].astype(str)
+              .str.lstrip("0")
+              .pipe(pd.to_numeric, errors="coerce")
+              .astype("Int64")
+        )
+        df = df.rename(columns={"lat":"latitude","lon":"longitude"})
+        # Asegura la columna cross_street
+        if "cross_street" not in df.columns and "cross street" in df.columns:
+            df["cross_street"] = df["cross street"]
+        return df[["station_id","name","cross_street","latitude","longitude"]]
+    
+    # Carga y merge
+    avail_df    = load_availability()
+    stations_df = load_stations_for_anim()
+    merged      = pd.merge(avail_df, stations_df, on="station_id", how="inner")
+    if merged.empty:
+        st.error("❌ No hay datos tras hacer el merge por 'station_id'")
+        st.stop()
+    
+    # Preparar columnas de fecha y hora
+    merged["date"] = merged["time"].dt.date
+    merged["hour"] = merged["time"].dt.hour
+    
+    # Selector de fecha
+    dates = sorted(merged["date"].unique())
+    selected_date = st.select_slider(
+        "Select date",
+        options=dates,
+        value=dates[0],
+        format_func=lambda d: d.strftime("%Y-%m-%d")
+    )
+    
+    # Selector de periodo del día
+    periods = {
+        "Mañana (6–12h)": range(6,12),
+        "Tarde  (12–18h)": range(12,18),
+        "Noche  (18–24h)": range(18,24)
+    }
+    selected_period = st.selectbox("Select period of day", list(periods.keys()))
+    
+    # Filtrar por fecha y período
+    hour_range = periods[selected_period]
+    subset = merged[
+        (merged["date"] == selected_date) &
+        (merged["hour"].isin(hour_range))
+    ]
+    if subset.empty:
+        st.warning(f"No data on {selected_date} during {selected_period}")
+        st.stop()
+    
+    # Función para colorear según bicis disponibles
+    def bike_color(n):
+        if n < 2:     return "#E74C3C"  # rojo
+        elif n <= 10: return "#F39C12"  # naranja
+        else:         return "#2ECC71"  # verde
+    
+    # Crear mapa
+    m = folium.Map(location=[41.3851, 2.1734], zoom_start=13)
+    for r in subset.itertuples(index=False):
+        col       = bike_color(r.available_bikes)
+        name      = getattr(r, "name", "Sin nombre")
+        barrio    = getattr(r, "cross_street", "Barrio desconocido")
+        available = int(round(r.available_bikes))
+        lat, lon  = r.latitude, r.longitude
+    
+        popup_html = f"""
+          <div style='font-family:sans-serif; font-size:13px;'>
+            <b>{name}</b><br>
+            <span style='color:#555;'>{barrio}</span><br>
+            Available: <b>{available}</b>
+          </div>
+        """
+        folium.CircleMarker(
+            location=[lat, lon],
+            radius=6,
+            color=col,
+            fill=True,
+            fill_color=col,
+            fill_opacity=0.7,
+            popup=folium.Popup(popup_html, max_width=250)
+        ).add_to(m)
+    
+    # Mostrar mapa
+    st.subheader(f"Availability on {selected_date} — {selected_period}")
+    st_folium(m, width=800, height=500)
 
 # ─── 6. STATS ───────────────────────────────────────────────
 elif st.session_state.page == "Stats":
