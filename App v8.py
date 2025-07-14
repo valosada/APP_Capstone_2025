@@ -228,7 +228,7 @@ elif st.session_state.page == "Maps":
             ).add_to(cluster)
         
         # Mostrás el mapa
-        st_folium(m, width=800, height=300)
+        st_folium(m, width=800, height=400)
 
     # 4.2 Animated Map: Availability Over Time
     st.subheader("Comparison of Bike Availability and Population")
