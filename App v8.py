@@ -271,80 +271,19 @@ elif st.session_state.page == "Stats":
 
     df = load_data()
 
-    # ─── 2) Controles principales arriba ───────────────────────
-    # Preparamos la lista de opciones: primero "Todas", luego "ID - Nombre"
-    unique_stations = (
-        df[["station_id","name"]]
-        .drop_duplicates()
-        .sort_values(["station_id"])
-    )
-    station_options = [
-        f"{row.station_id} - {row.name}"
-        for row in unique_stations.itertuples()
-    ]
-    sel_label = st.selectbox("Station", station_options)
+    # 4.2 Animated Map: Availability Over Time
+    st.header("🚲👨🏻‍👩🏻‍👧🏻‍🧒🏻 Comparison of Bike Availability and Population")
+    
+    # 1. Carga las imágenes desde disco
+    lines_img         = Image.open("data/Dock available altitude hour.jpg")          # lines
+    heatmap_img         = Image.open("data/Heatmep main change in availability per altitude and hour.jpg")          # heatmap
 
-    # Extraemos station_id si no es "Todas"
-    if sel_label == "All stations":
-        sel_station_id = None
-    else:
-        sel_station_id = int(sel_label.split(" - ", 1)[0])
-
-    # Selector de rango de fechas en línea
-    dates = sorted(df["time"].dt.date.unique())
-    sel_dates = st.select_slider(
-        "Select timeframe",
-        options=dates,
-        value=(dates[0], dates[-1]),
-        format_func=lambda d: d.strftime("%Y-%m-%d")
-    )
-
-    # Selector de rango de horas en línea
-    sel_hours = st.slider(
-        "Select time",
-        min_value=0, max_value=23,
-        value=(0,23),
-        help="Select time"
-    )
-
+    st.subheader("Dock availability per altitude and hours")
+    st.image(lines_img, use_container_width=True)
     st.markdown("---")
-
-    # 3) Filtrado
-    mask = (
-        ((df["station_id"] == sel_station_id) if sel_station_id is not None else True) &
-        df["time"].dt.date.between(sel_dates[0], sel_dates[1]) &
-        df["time"].dt.hour.between(sel_hours[0], sel_hours[1])
-    )
-    sub = df[mask]
-    if sub.empty:
-        st.warning("No data.")
-        st.stop()
-
-    # 4) KPIs generales
-    col1, col2, col3 = st.columns(3)
-    dias = (sel_dates[1] - sel_dates[0]).days + 1
-    with col1:
-        st.metric("📅 Days", f"{dias}")
-    with col2:
-        avg_disp = sub["available_bikes"].mean().round(1)
-        st.metric("🚲 Average availability", f"{avg_disp}")
-    with col3:
-        num_empty = (sub["available_bikes"] == 0).sum()
-        num_full  = (sub["available_bikes"] >= sub["available_bikes"].max()).sum()
-        #st.metric("⚠️ Empty/Available", f"{num_empty}/{num_full}")
-
-    st.markdown("---")
-
-    # 5) Gráfico de líneas: disponibilidad media por hora
-    st.subheader("📈 Average availability per hour")
-    hourly = sub.groupby(sub["time"].dt.hour)["available_bikes"].mean()
-    fig, ax = plt.subplots()
-    ax.plot(hourly.index, hourly.values, marker="o")
-    ax.set_xlabel("Time")
-    ax.set_ylabel("Available bikes (average)")
-    ax.set_xticks(range(0,24))
-    st.pyplot(fig)
-
+  
+    st.subheader("Heatmap: Availability (%) per altitude and hours")
+    st.image(heatmap_img, use_container_width=True)
     st.markdown("---")
 
     # 6) Heatmap día de semana vs hora
