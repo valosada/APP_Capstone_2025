@@ -8,6 +8,7 @@ import pandas as pd
 import folium
 import numpy as np
 import matplotlib.pyplot as plt
+from dateutil.easter import easter
 from PIL import Image
 from folium.plugins import MarkerCluster, TimestampedGeoJson
 from folium import CustomIcon
