@@ -610,10 +610,10 @@ elif st.session_state.page == "Ranking":
 elif st.session_state.page == "Team":
     st.header("👥 Meet the Team")
     team = [
-        {"name":"Agustín Jaime","img":"assets/vicky.jpg"},
-        {"name":"Javier Verba","img":"assets/vicky.jpg"},
+        {"name":"Agustín Jaime","img":"assets/Agus.png"},
+        {"name":"Javier Verba","img":"assets/Javi.png"},
         {"name":"Mariana Henriques","img":"assets/Mariana.jpg"},
-        {"name":"Victoria Losada","img":"assets/vicky.jpg"},
+        {"name":"Victoria Losada","img":"assets/Vicky.jpg"},
     ]
     cols = st.columns(4, gap="small")
     for col, member in zip(cols, team):
