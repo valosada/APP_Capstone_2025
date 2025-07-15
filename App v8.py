@@ -612,8 +612,8 @@ elif st.session_state.page == "Team":
     team = [
         {"name":"Agustín Jaime","img":"assets/Agus.png"},
         {"name":"Javier Verba","img":"assets/Javi.png"},
-        {"name":"Mariana Henriques","img":"assets/Mariana.jpg"},
-        {"name":"Victoria Losada","img":"assets/Vicky.jpg"},
+        {"name":"Mariana Henriques","img":"assets/Mariana.png"},
+        {"name":"Victoria Losada","img":"assets/Vicky.png"},
     ]
     cols = st.columns(4, gap="small")
     for col, member in zip(cols, team):
