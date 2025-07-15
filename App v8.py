@@ -118,7 +118,7 @@ elif st.session_state.page == "Prediction":
 
     # 2) Muestro las primeras filas
     st.subheader("📋 Preview")
-    st.table(submission.head(10))
+    st.dataframe(submission.head(5), height=200)
 
     # 3) Estadísticas básicas
     st.subheader("ℹ️ Stats")
@@ -126,7 +126,7 @@ elif st.session_state.page == "Prediction":
 
     # 4) Histograma de las predicciones
     st.subheader("📈 Distribution of predictions")
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(5, 3))  # antes era el default (más grande)
     ax.hist(submission.iloc[:, 1], bins=30, edgecolor="k")  # asumiendo que la 2ª col es la pred
     ax.set_xlabel("Prediction")
     ax.set_ylabel("Frequency")
@@ -150,7 +150,7 @@ elif st.session_state.page == "Prediction":
 
         # Curva real vs predicha
         st.subheader("🔍 Real vs. Forecast")
-        fig2, ax2 = plt.subplots()
+        fig2, ax2 = plt.subplots(figsize=(5, 3))
         ax2.scatter(y_true, y_pred, alpha=0.6)
         ax2.plot([y_true.min(), y_true.max()],[y_true.min(), y_true.max()], 'r--')
         ax2.set_xlabel("Real value")
